@@ -12,7 +12,7 @@ readme.md
 
 ### /RAnalysis/Data
 
- Folder contains raw data for the following data for larvae *A. irradiains* under OA treatments: 
+ Folder contains the following data for larvae *A. irradiains* under OA treatments: 
  
 * D-stage percent abnormalities
 

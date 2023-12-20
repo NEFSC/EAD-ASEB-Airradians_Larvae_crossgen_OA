@@ -395,27 +395,32 @@ surv_F3_low  <- Surv(time = as.numeric(binary_df_F3_low$Age),
 library(survminer)
 
 
-
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_high_history.pdf")
 ggsurvplot(survfit(surv_F3_high ~ Larvae_pCO2, binary_df_F3_high), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange", "purple")),
            #                 c(0.7,0.5, 0.3, 0.1)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
+dev.off()
 
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_moderate_history.pdf")
 ggsurvplot(survfit(surv_F3_mod ~ Larvae_pCO2, binary_df_F3_mod), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange", "purple")),
            #                 c(0.7,0.5, 0.3, 0.1)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
+dev.off()
 
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_low_history.pdf")
 ggsurvplot(survfit(surv_F3_low ~ Larvae_pCO2, binary_df_F3_low), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange", "purple")),
            #                 c(0.7,0.5, 0.3, 0.1)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
+dev.off()
 ```
 run cox propotional hazard test
 ```{r}

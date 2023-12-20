@@ -332,12 +332,15 @@ df_F3 <- df_F3 %>%
           dplyr::mutate(Count_dead = 
                           (1/as.numeric(proportion))*as.numeric(Count_alive)) # proportion is that of alive
 
+
+# for loop for stats! 
+# difference here is that tank is included - use this as a random effect in the model!
 # Call the cumulative dataframe that we will write to in the for loop below
 binary_df_F3_all     <- data.frame() # start dataframe 
 binary_df_F3_high    <- data.frame() # start dataframe 
 binary_df_F3_mod     <- data.frame() # start dataframe 
 binary_df_F3_low     <- data.frame() # start dataframe 
-
+# run it 
 for (i in 1:nrow(df_F3)) {
    count_alive <- round(df_F3[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
    count_dead  <- round(df_F3[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
@@ -371,14 +374,57 @@ for (i in 1:nrow(df_F3)) {
   
 }
 
-binary_df_F3$All_pCO2 <- as.factor(paste0(binary_df_F3$Parent_pCO2, ' x ', binary_df_F3$Larvae_pCO2))
+binary_df_F3_all$All_pCO2 <- as.factor(paste0(binary_df_F3_all$Parent_pCO2, ' x ', binary_df_F3_all$Larvae_pCO2))
 
 
+# for loop for plotting!! 
+# difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
+df_F3_MEANS <- df_F3 %>% 
+  dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
+  dplyr::group_by(Parent_pCO2, Larvae_pCO2, Age) %>% 
+  dplyr::summarise(mean_Count_alive = mean(Count_alive), 
+            mean_Count_dead = mean(Count_dead))
+# call datafarme binary for plotting
+binary_df_F3_MEANS       <- data.frame() # start dataframe 
+binary_df_F3_MEANS_high  <- data.frame() # start dataframe 
+binary_df_F3_MEANS_mod   <- data.frame() # start dataframe 
+binary_df_F3_MEANS_low   <- data.frame() # start dataframe 
+
+# run it 
+for (i in 1:nrow(df_F3_MEANS)) {
+   count_alive <- round(df_F3_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_F3_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 4, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Parent_pCO2 = df_F3_MEANS[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_F3_MEANS[i,]$Larvae_pCO2,
+                            Age         = df_F3_MEANS[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),4] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),4] = 0 # 0 for alive
+
+  loopDF             <- data.frame(loopDF) # name dataframe for this single row
+  binary_df_F3_MEANS <- rbind(binary_df_F3_MEANS,loopDF) #bind to a cumulative list dataframe
+     
+  if (loopDF$Parent_pCO2[1] == 'High pCO2') {
+      binary_df_F3_MEANS_high <- rbind(binary_df_F3_MEANS_high,loopDF) #bind to a cumulative list dataframe
+  } else if (loopDF$Parent_pCO2[1] == 'Moderate pCO2') {
+      binary_df_F3_MEANS_mod <- rbind(binary_df_F3_MEANS_mod,loopDF) #bind to a cumulative list dataframe
+  } else {
+      binary_df_F3_MEANS_low <- rbind(binary_df_F3_MEANS_low,loopDF) #bind to a cumulative list dataframe
+  }
+    
+}
 ```
 
 
-```{r}
+```{r create surv object}
 
+# create surv object
+# with tank included in the data frame (first for loop above)
 surv_F3_all  <- Surv(time = as.numeric(binary_df_F3_all$Age), 
                      event = as.numeric(binary_df_F3_all$Count_dead), type = "right")
 
@@ -391,73 +437,86 @@ surv_F3_mod  <- Surv(time = as.numeric(binary_df_F3_mod$Age),
 surv_F3_low  <- Surv(time = as.numeric(binary_df_F3_low$Age), 
                      event = as.numeric(binary_df_F3_low$Count_dead), type = "right")
 
+# create surv object
+# without tank included - means wihtin treatment SEPCIFICALLY FOR PLOTTING  second for loop above 
+surv_F3_MEANS  <- Surv(time = as.numeric(binary_df_F3_MEANS$Age), 
+                     event = as.numeric(binary_df_F3_MEANS$Count_dead), type = "right")
+
+
+is.na(binary_df_F3_MEANS_low$Parent_pCO2) <- binary_df_F3_MEANS_low$Parent_pCO2 == "None"
+binary_df_F3_MEANS_low$Parent_pCO2 <- factor(binary_df_F3_MEANS_low$Parent_pCO2)
+str(binary_df_F3_MEANS_low) # youll see now its fixed
+
+surv_F3_MEANS_low  <- Surv(time = as.numeric(binary_df_F3_MEANS_low$Age), 
+                     event = as.numeric(binary_df_F3_MEANS_low$Count_dead), type = "right")
+
+is.na(binary_df_F3_MEANS_mod$Parent_pCO2) <- binary_df_F3_MEANS_mod$Parent_pCO2 == "None"
+binary_df_F3_MEANS_mod$Parent_pCO2 <- factor(binary_df_F3_MEANS_mod$Parent_pCO2)
+str(binary_df_F3_MEANS_mod) # youll see now its fixed
+
+surv_F3_MEANS_mod  <- Surv(time = as.numeric(binary_df_F3_MEANS_mod$Age), 
+                     event = as.numeric(binary_df_F3_MEANS_mod$Count_dead), type = "right")
+
+
+is.na(binary_df_F3_MEANS_high$Parent_pCO2) <- binary_df_F3_MEANS_high$Parent_pCO2 == "None"
+binary_df_F3_MEANS_high$Parent_pCO2 <- factor(binary_df_F3_MEANS_high$Parent_pCO2)
+str(binary_df_F3_MEANS_high) # youll see now its fixed
+
+surv_F3_MEANS_high  <- Surv(time = as.numeric(binary_df_F3_MEANS_high$Age), 
+                     event = as.numeric(binary_df_F3_MEANS_high$Count_dead), type = "right")
+
+```
+
+
+```{r plotting}
 
 library(survminer)
 
 
-pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_high_history.pdf")
-ggsurvplot(survfit(surv_F3_high ~ Larvae_pCO2, binary_df_F3_high), 
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_low_history.pdf")
+ggsurvplot(survfit(surv_F3_MEANS_low ~ Larvae_pCO2, binary_df_F3_MEANS_low), 
            risk.table = F, pval = F , conf.int = TRUE,
-           palette = alpha(c("forestgreen","orange", "purple")),
-           #                 c(0.7,0.5, 0.3, 0.1)), 
+           palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
 dev.off()
 
 pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_moderate_history.pdf")
-ggsurvplot(survfit(surv_F3_mod ~ Larvae_pCO2, binary_df_F3_mod), 
+ggsurvplot(survfit(surv_F3_MEANS_mod ~ Larvae_pCO2, binary_df_F3_MEANS_mod), 
            risk.table = F, pval = F , conf.int = TRUE,
-           palette = alpha(c("forestgreen","orange", "purple")),
-           #                 c(0.7,0.5, 0.3, 0.1)), 
+           palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.2)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
 dev.off()
 
-pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_low_history.pdf")
-ggsurvplot(survfit(surv_F3_low ~ Larvae_pCO2, binary_df_F3_low), 
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_high_history.pdf")
+ggsurvplot(survfit(surv_F3_MEANS_high ~ Larvae_pCO2, binary_df_F3_MEANS_high), 
            risk.table = F, pval = F , conf.int = TRUE,
-           palette = alpha(c("forestgreen","orange", "purple")),
-           #                 c(0.7,0.5, 0.3, 0.1)), 
+           palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
            legend.title = "treatment")
 dev.off()
+
 ```
-run cox propotional hazard test
-```{r}
-survFit1 <- coxph(surv_F3 ~ factor(All_pCO2), binary_df_F3 )
-survFit1 <- coxph(surv_F3 ~ Parent_pCO2 *Larvae_pCO2 , binary_df_F3 )
-summary(survFit1)
-View(binary_df_F3)
-
-survFit_all <- coxph(surv_F3_all ~ Parent_pCO2 *Larvae_pCO2 , binary_df_F3_all)
-summary(survFit_all)
-
-survFit_high <- coxph(surv_F3_high ~ Larvae_pCO2 , binary_df_F3_high)
-summary(survFit_high)
-
-survFit_low <- coxph(surv_F3_low ~ Larvae_pCO2 , binary_df_F3_low)
-summary(survFit_low)
-
-survFit_mod <- coxph(surv_F3_mod ~ Larvae_pCO2 , binary_df_F3_mod)
-summary(survFit_mod)
-```
-
+run cox proportional test
 include tank as a random effect
 ```{r}
+library(coxme)
 
-survFitME <- coxme(surv_F3 ~ Parent_pCO2 *Larvae_pCO2 + (1|Tank), binary_df_F3)
-summary(survFitME)
-#The standard deviation of the tank random effect is very small (0.02) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (15.4), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
+# remove "none" and the level - for some reason this lingered, dont know why
+str(binary_df_F3_all) # before running, youll see PArent_pCO2 has 4 levels - we only want 3!
+is.na(binary_df_F3_all$Parent_pCO2) <- binary_df_F3_all$Parent_pCO2 == "None"
+binary_df_F3_all$Parent_pCO2 <- factor(binary_df_F3_all$Parent_pCO2)
+str(binary_df_F3_all) # youll see now its fixed
+
+# now run the model
+
+survFitME_all_tank <- coxme(surv_F3_all ~ Larvae_pCO2*Parent_pCO2 + (1|Tank), binary_df_F3_all)
+summary(survFitME_all_tank)
+
+#The standard deviation of the tank random effect is very small (0.015) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (527597), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
+
 ```
-
-calculate coefficient of determination (r^2)
-```{r}
-library(yardstick)
-rsq(survFit1, sigD=2)
-
-```
-
-
 
 ```{r}
 
@@ -466,7 +525,7 @@ rsq(survFit1, sigD=2)
 
 library(multcomp)
 
-glht(survFitME, linfct = mcp(pH = "Dunnett"),alternative = "greater")
+glht(survFitME_all_tank, linfct = mcp(Parent_pCO2 = "Dunnett"),alternative = "greater")
 
 ```
 

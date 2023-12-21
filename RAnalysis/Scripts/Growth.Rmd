@@ -78,11 +78,11 @@ Rep_Summary_G2 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria
 
 ```
 
-
+#looks like this code can be deleted?
 ```{r}
-df$treatment <- factor(df$treatment,levels = c("Low OA", "Moderate OA", "High OA"))
+#df$treatment <- factor(df$treatment,levels = c("Low OA", "Moderate OA", "High OA"))
 
-df$Parental_OA <- factor(df$Parental_OA,levels = c("Wild", "LOW", "MODERATE", "HIGH"))
+#df$Parental_OA <- factor(df$Parental_OA,levels = c("Wild", "LOW", "MODERATE", "HIGH"))
 ```
 
 ### make data frames for each generation

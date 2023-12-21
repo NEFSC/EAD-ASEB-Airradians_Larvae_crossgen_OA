@@ -28,6 +28,8 @@ library(emmeans)
 library(ggpubr)
 library(survival)
 library(Rmisc)
+library(coxme)
+library(survminer)
 ```
 
 
@@ -61,7 +63,9 @@ head(df)
 str(df)
 ```
 
+## About data 
 
+* output tables for each generation where 'n' is the number of tanks!
 
 ```{r about data}
 
@@ -100,45 +104,405 @@ df_F3 <- df%>%
 ```
 
 # F1 Larval Survival
-```{r}
 
-stL <- summarySE(df_F1, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL 
+## Plot it!
+```{r F1 summary and plot}
 
-ggplot(stL, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
-  geom_point()+ 
-   geom_errorbar(aes(ymin=Percent_Survival-se, ymax=Percent_Survival+se), width=.2,
-                position=position_dodge(.1)) +
-  scale_color_manual(values=c("green4", "darkorange1", "purple"))+
-  theme(legend.position="right", legend.direction="vertical", legend.title = element_blank())+ theme_bw() + 
-  labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+stL_F1 <- summarySE(df_F1, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
+stL_F1 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+F1_PlotMeanSE <-  ggplot(stL_F1, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
+                          geom_point()+ 
+                           geom_errorbar(aes(ymin=Percent_Survival-se, 
+                                             ymax=Percent_Survival+se), width=.2,
+                                        position=position_dodge(.1)) +
+                          scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                          theme(legend.position="right", legend.direction="vertical", legend.title = element_blank())+ theme_bw() + 
+                          labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                          ggtitle("F1 larvae survival (Mean +- SE)") + 
+                          theme(panel.grid.major = element_blank(), 
+                                panel.grid.minor = element_blank(), 
+                                panel.background = element_blank(), 
+                                axis.line = element_line(colour = "black"))
  
+F1_PlotMeanSE
+
+pdf("Output/Survival/F1_survival_meanSE.pdf", width=10, height=5)
+print(F1_PlotMeanSE)
+dev.off()
+
 ```
+
+## Build 'surv' object for statistical analysis 
+
+* What the hell does this mean?? 
+  
+  - a 'surv' object reads ALL events as that of a dead or alive individual
+  
+  - but but but... we have volumetric count data of live and dead! Does this not throw a wrench into this type of analysis? 
+  
+    - Nope! Below we use logic to create a GIGANTIC table formatted correctly for this purpose!
+  
+```{r F1 build binary live and dead column}
+
+#make a surv object to pass into coxme
+# create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
+df_F1 <- df_F1 %>% 
+          dplyr::mutate(Count = 
+                          as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
+          dplyr::mutate(Count_dead = case_when(proportion == 0 ~ 0,
+                                               proportion >0 ~ (1/as.numeric(proportion))*as.numeric(Count_alive))) # proportion is that of alive
+
+
+# Run two for loops 
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+
+# keep tank to use as a random effect in the cox model!
+# Call the cumulative dataframe that we will write to in the for loop below
+binary_df_F1_all     <- data.frame() # start dataframe  - all
+binary_df_F1_mod     <- data.frame() # start dataframe  - only mod history
+binary_df_F1_low     <- data.frame() # start dataframe  - only low history
+# run it 
+for (i in 1:nrow(df_F1)) {
+   count_alive <- round(df_F1[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_F1[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Parent_pCO2 = df_F1[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_F1[i,]$Larvae_pCO2,
+                            Generation  = df_F1[i,]$Generation,
+                            Tank        = df_F1[i,]$Tank,  
+                            Age         = df_F1[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),6] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
+
+  loopDF           <- data.frame(loopDF) # name dataframe for this single row
+  binary_df_F1_all <- rbind(binary_df_F1_all,loopDF) #bind to a cumulative list dataframe
+  
+}
+
+
+
+
+# (2) Mean counts alive and dead by tank - better presentative for plots!
+
+# for loop for plotting!! 
+# difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
+df_F1_MEANS <- df_F1 %>% 
+              dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
+              dplyr::group_by(Larvae_pCO2, Age) %>% 
+              dplyr::summarise(mean_Count_alive = mean(Count_alive), 
+                               mean_Count_dead = mean(Count_dead))
+# call datafarme binary for plotting
+binary_df_F1_MEANS       <- data.frame() # start dataframe 
+
+# run it 
+for (i in 1:nrow(df_F1_MEANS)) {
+   count_alive <- round(df_F1_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_F1_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Larvae_pCO2 = df_F1_MEANS[i,]$Larvae_pCO2,
+                            Age         = df_F1_MEANS[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),3] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
+
+  loopDF             <- data.frame(loopDF) # name dataframe for this single row
+  binary_df_F1_MEANS <- rbind(binary_df_F1_MEANS,loopDF) #bind to a cumulative list dataframe
+  
+}
+
+# view the output binary format for building the surv object!
+head(binary_df_F1_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria") # view exmaple of the output data 
+
+
+```
+
+```{r F1 build surv object and plot 'em}
+
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+# build the surv object! 
+# with tank included in the data frame (first for loop above)
+surv_F1_all  <- Surv(time = as.numeric(binary_df_F1_all$Age), 
+                     event = as.numeric(binary_df_F1_all$Count_dead), type = "right")
+# plot the surv data
+ggsurvplot(survfit(surv_F1_all ~ Larvae_pCO2, binary_df_F1_all), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+
+
+
+
+# (2) Mean counts alive and dead by tank - better presentative for plots!
+# build the surv object! 
+# with tank included in the data frame (first for loop above)
+surv_F1_means_all  <- Surv(time = as.numeric(binary_df_F1_MEANS$Age), 
+                     event = as.numeric(binary_df_F1_MEANS$Count_dead), type = "right")
+# with the mean data by  tank replicate! better - save this one
+ggsurvplot(survfit(surv_F1_means_all ~ Larvae_pCO2, binary_df_F1_MEANS), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+
+# plot the surv data
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F1_survival.pdf")
+ggsurvplot(survfit(surv_F1_means_all ~ Larvae_pCO2, binary_df_F1_MEANS), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+dev.off()
+
+```
+
+```{r F1 run coxme on surv stats}
+
+head(binary_df_F1_all)
+# use this data from the first fr loop - has live and dead counts with reoslution of treatment AND replicate tank!!!
+
+# now run the model
+F1_survFIT_cox <- coxme(surv_F1_all ~ Larvae_pCO2 + (1|Tank), binary_df_F1_all)
+summary(F1_survFIT_cox)
+
+#                               coef exp(coef)   se(coef)     z       p
+# Larvae_pCO2Moderate pCO2 0.1059100  1.111722 0.01277808  8.29 1.1e-16
+# Larvae_pCO2High pCO2     0.8663613  2.378241 0.01519810 57.00 0.0e+00
+
+
+#The standard deviation of the tank random effect is very small (0.006017691) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (312321 ), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
+
+
+#pairwise comparisons
+
+library(multcomp)
+
+glht(F1_survFIT_cox, linfct = mcp(Larvae_pCO2 = "Dunnett"),alternative = "greater")
+# Linear Hypotheses:
+#                               Estimate
+# Moderate pCO2 - Low pCO2 <= 0   0.1059
+# High pCO2 - Low pCO2 <= 0       0.8664
+
+
+```
+
 
 # F2 Larval Survival
-```{r}
 
-stL <- summarySE(df_F2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL 
+## Plot it!
+```{r F2 summary and plot}
 
-ggplot(stL, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2))+ geom_line()+
-  geom_point()+ 
-   geom_errorbar(aes(ymin=Percent_Survival-se, ymax=Percent_Survival+se), width=.2,
-                position=position_dodge(.1)) +
-  scale_color_manual(values=c("green4", "darkorange1", "purple"))+
-  theme(legend.position="right", legend.direction="vertical", legend.title = element_blank())+ theme_bw() + 
-  labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+stL_F2 <- summarySE(df_F2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
+stL_F2 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+F2_PlotMeanSE <- ggplot(stL_F2, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2))+ geom_line()+
+                            geom_point()+ 
+                             geom_errorbar(aes(ymin=Percent_Survival-se, ymax=Percent_Survival+se), width=.2,
+                                          position=position_dodge(.1)) +
+                            scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                            theme(legend.position="right", legend.direction="vertical", legend.title = element_blank())+ theme_bw() + 
+                            labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                            ggtitle("F2 larvae survival (Mean +- SE)") + 
+                            theme(panel.grid.major = element_blank(), 
+                                  panel.grid.minor = element_blank(), 
+                                  panel.background = element_blank(), 
+                                  axis.line = element_line(colour = "black"))
  
+F2_PlotMeanSE
+
+pdf("Output/Survival/F2_survival_meanSE.pdf", width=10, height=5)
+print(F2_PlotMeanSE)
+dev.off()
+
 ```
+
+```{r F2 build binary live and dead column}
+
+#make a surv object to pass into coxme
+# create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
+df_F2 <- df_F2 %>% 
+          dplyr::mutate(Count = 
+                          as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
+          dplyr::mutate(Count_dead = case_when(proportion == 0 ~ 0,
+                                               proportion >0 ~ (1/as.numeric(proportion))*as.numeric(Count_alive))) # proportion is that of alive
+
+
+# Run two for loops 
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+
+# keep tank to use as a random effect in the cox model!
+# Call the cumulative dataframe that we will write to in the for loop below
+binary_df_F2_all     <- data.frame() # start dataframe  - all
+
+# run it 
+for (i in 1:nrow(df_F2)) {
+   count_alive <- round(df_F2[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_F2[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Parent_pCO2 = df_F2[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_F2[i,]$Larvae_pCO2,
+                            Generation  = df_F2[i,]$Generation,
+                            Tank        = df_F2[i,]$Tank,  
+                            Age         = df_F2[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),6] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
+
+  loopDF           <- data.frame(loopDF) # name dataframe for this single row
+  binary_df_F2_all <- rbind(binary_df_F2_all,loopDF) #bind to a cumulative list dataframe
+  
+}
+
+
+
+
+# (2) Mean counts alive and dead by tank - better presentative for plots!
+
+# for loop for plotting!! 
+# difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
+df_F2_MEANS <- df_F2 %>% 
+              dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
+              dplyr::group_by(Larvae_pCO2, Age) %>% 
+              dplyr::summarise(mean_Count_alive = mean(Count_alive), 
+                               mean_Count_dead = mean(Count_dead))
+# call datafarme binary for plotting
+binary_df_F2_MEANS       <- data.frame() # start dataframe 
+
+# run it 
+for (i in 1:nrow(df_F2_MEANS)) {
+   count_alive <- round(df_F2_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_F2_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Larvae_pCO2 = df_F2_MEANS[i,]$Larvae_pCO2,
+                            Age         = df_F2_MEANS[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),3] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
+
+  loopDF             <- data.frame(loopDF) # name dataframe for this single row
+  binary_df_F2_MEANS <- rbind(binary_df_F2_MEANS,loopDF) #bind to a cumulative list dataframe
+  
+}
+
+# view the output binary format for building the surv object!
+head(binary_df_F2_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria") # view exmaple of the output data 
+
+
+```
+
+```{r F2 build surv object and plot 'em}
+
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+# build the surv object! 
+# with tank included in the data frame (first for loop above)
+surv_F2_all  <- Surv(time = as.numeric(binary_df_F2_all$Age), 
+                     event = as.numeric(binary_df_F2_all$Count_dead), type = "right")
+# plot the surv data
+ggsurvplot(survfit(surv_F2_all ~ Larvae_pCO2, binary_df_F2_all), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+
+
+
+
+# (2) Mean counts alive and dead by tank - better presentative for plots!
+# build the surv object! 
+# with tank included in the data frame (first for loop above)
+surv_F2_means_all  <- Surv(time = as.numeric(binary_df_F2_MEANS$Age), 
+                     event = as.numeric(binary_df_F2_MEANS$Count_dead), type = "right")
+# with the mean data by  tank replicate! better - save this one
+ggsurvplot(survfit(surv_F2_means_all ~ Larvae_pCO2, binary_df_F2_MEANS), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange"), c(1,0.8)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+
+# plot the surv data
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F2_survival.pdf")
+ggsurvplot(survfit(surv_F2_means_all ~ Larvae_pCO2, binary_df_F2_MEANS), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "treatment")
+dev.off()
+
+```
+
+```{r F2 run coxme on surv stats}
+
+head(binary_df_F2_all)
+# use this data from the first fr loop - has live and dead counts with reoslution of treatment AND replicate tank!!!
+
+# omit the level high pCO2 because it is not actually present - to be a carry over from the full dataset?
+is.na(binary_df_F2_all$Larvae_pCO2) <- binary_df_F2_all$Larvae_pCO2 == "High pCO2"
+binary_df_F2_all$Larvae_pCO2 <- factor(binary_df_F2_all$Larvae_pCO2)
+str(binary_df_F2_all) # Larvae_pCO2 now has two factors - correct!!
+
+# now run the model
+F2_survFIT_cox <- coxme(surv_F2_all ~ Larvae_pCO2 + (1|Tank), binary_df_F2_all)
+summary(F2_survFIT_cox)
+
+#                               coef exp(coef)   se(coef)   z      p
+# Larvae_pCO2Moderate pCO2 0.1269179  1.135324 0.04536691 2.8 0.0051
+
+
+#The standard deviation of the tank random effect is very small (0.006017691) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (312321 ), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
+
+
+#pairwise comparisons
+
+library(multcomp)
+
+glht(F2_survFIT_cox, linfct = mcp(Larvae_pCO2 = "Dunnett"),alternative = "greater")
+
+# Linear Hypotheses:
+#                               Estimate
+# Moderate pCO2 - Low pCO2 <= 0   0.1269
+
+
+```
+
 # F3 Larval Survival
-```{r}
+## Plot it!
+```{r F3 summary and plot}
 
-stL <- summarySE(df_F3, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2", "Parent_pCO2"))
-stL 
+stL_F3 <- summarySE(df_F3, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2", "Parent_pCO2"))
+stL_F3 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
-Gen3_PlotMeanSE_All <- ggplot(stL, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2))+ 
+Gen3_PlotMeanSE <- ggplot(stL_F3, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2))+ 
                         geom_line()+
                         geom_point()+ 
                         geom_errorbar(aes(ymin=Percent_Survival-se, ymax=Percent_Survival+se), width=.2,
@@ -147,12 +511,13 @@ Gen3_PlotMeanSE_All <- ggplot(stL, aes(x=Age, y=Percent_Survival, color=Larvae_p
                         theme(legend.position="right", legend.direction="vertical", 
                               legend.title = element_blank())+ theme_bw() + 
                         labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                        ggtitle("F3 larvae survival (Mean +- SE)") + 
                         theme(panel.grid.major = element_blank(), 
                               panel.grid.minor = element_blank(), 
                               panel.background = element_blank(), 
                               axis.line = element_line(colour = "black"))+
                         facet_wrap("Parent_pCO2")
-
+Gen3_PlotMeanSE
 
 
 # Summarise Percent Deformities for plotting 
@@ -292,38 +657,34 @@ Gen3_barplots_Age16 <- Gen3_mean_survival %>% dplyr::filter(Age ==16) %>%
 
 # print the plot
 
-pdf("Output/Survival/PercSurvival_Gen3_All.pdf", width=10, height=5)
+pdf("Output/Survival/F3_survival_meanSE.pdf", width=10, height=5)
 print(Gen3_PlotMeanSE_All)
 dev.off()
-
-
-pdf("Output/Survival/PercSurvival_Gen3_2DPF.pdf", width=5, height=5)
-print(Gen3_barplots_Age2)
-dev.off()
-
-pdf("Output/Survival/PercSurvival_Gen3_5DPF.pdf", width=5, height=5)
-print(Gen3_barplots_Age5)
-dev.off()
-
-pdf("Output/Survival/PercSurvival_Gen3_7DPF.pdf", width=5, height=5)
-print(Gen3_barplots_Age7)
-dev.off()
-
-pdf("Output/Survival/PercSurvival_Gen3_12DPF.pdf", width=5, height=5)
-print(Gen3_barplots_Age12)
-dev.off()
-
-pdf("Output/Survival/PercSurvival_Gen3_16DPF.pdf", width=5, height=5)
-print(Gen3_barplots_Age16)
-dev.off()
+# 
+# 
+# pdf("Output/Survival/PercSurvival_Gen3_2DPF.pdf", width=5, height=5)
+# print(Gen3_barplots_Age2)
+# dev.off()
+# 
+# pdf("Output/Survival/PercSurvival_Gen3_5DPF.pdf", width=5, height=5)
+# print(Gen3_barplots_Age5)
+# dev.off()
+# 
+# pdf("Output/Survival/PercSurvival_Gen3_7DPF.pdf", width=5, height=5)
+# print(Gen3_barplots_Age7)
+# dev.off()
+# 
+# pdf("Output/Survival/PercSurvival_Gen3_12DPF.pdf", width=5, height=5)
+# print(Gen3_barplots_Age12)
+# dev.off()
+# 
+# pdf("Output/Survival/PercSurvival_Gen3_16DPF.pdf", width=5, height=5)
+# print(Gen3_barplots_Age16)
+# dev.off()
 
 ```
 
-
-# Survival package  stats
-
-create surv object
-```{r}
+```{r F3 build binary live and dead column}
 #make a surv object to pass into coxme
 df_F3 <- df_F3 %>% 
           dplyr::mutate(Count = 
@@ -333,8 +694,11 @@ df_F3 <- df_F3 %>%
                           (1/as.numeric(proportion))*as.numeric(Count_alive)) # proportion is that of alive
 
 
-# for loop for stats! 
-# difference here is that tank is included - use this as a random effect in the model!
+# Run two for loops 
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+
+# keep tank to use as a random effect in the cox model!
 # Call the cumulative dataframe that we will write to in the for loop below
 binary_df_F3_all     <- data.frame() # start dataframe 
 binary_df_F3_high    <- data.frame() # start dataframe 
@@ -376,6 +740,8 @@ for (i in 1:nrow(df_F3)) {
 
 binary_df_F3_all$All_pCO2 <- as.factor(paste0(binary_df_F3_all$Parent_pCO2, ' x ', binary_df_F3_all$Larvae_pCO2))
 
+
+# (2) Mean counts alive and dead by tank - better presentative for plots!
 
 # for loop for plotting!! 
 # difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
@@ -420,8 +786,7 @@ for (i in 1:nrow(df_F3_MEANS)) {
 }
 ```
 
-
-```{r create surv object}
+```{r F3 build surv object}
 
 # create surv object
 # with tank included in the data frame (first for loop above)
@@ -467,41 +832,45 @@ surv_F3_MEANS_high  <- Surv(time = as.numeric(binary_df_F3_MEANS_high$Age),
 
 ```
 
+```{r F3 plot 'em}
 
-```{r plotting}
-
-library(survminer)
-
-
-pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_low_history.pdf")
-ggsurvplot(survfit(surv_F3_MEANS_low ~ Larvae_pCO2, binary_df_F3_MEANS_low), 
-           risk.table = F, pval = F , conf.int = TRUE,
-           palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
-           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
-           legend.title = "treatment")
-dev.off()
-
-pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_moderate_history.pdf")
-ggsurvplot(survfit(surv_F3_MEANS_mod ~ Larvae_pCO2, binary_df_F3_MEANS_mod), 
+pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_survival.pdf", width = 10)
+ggsurvplot(survfit(surv_F3_MEANS ~ Larvae_pCO2, binary_df_F3_MEANS), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.2)), 
-           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           break.x.by = 2 ,xlab = "Age (days post fertilization)",
+           facet.by = "Parent_pCO2",
            legend.title = "treatment")
 dev.off()
-
-pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_high_history.pdf")
-ggsurvplot(survfit(surv_F3_MEANS_high ~ Larvae_pCO2, binary_df_F3_MEANS_high), 
-           risk.table = F, pval = F , conf.int = TRUE,
-           palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
-           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
-           legend.title = "treatment")
-dev.off()
+# 
+# pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_surival_low_history.pdf")
+# ggsurvplot(survfit(surv_F3_MEANS_low ~ Larvae_pCO2, binary_df_F3_MEANS_low), 
+#            risk.table = F, pval = F , conf.int = TRUE,
+#            palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
+#            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+#            legend.title = "treatment")
+# dev.off()
+# 
+# pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_moderate_history.pdf")
+# ggsurvplot(survfit(surv_F3_MEANS_mod ~ Larvae_pCO2, binary_df_F3_MEANS_mod), 
+#            risk.table = F, pval = F , conf.int = TRUE,
+#            palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.2)), 
+#            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+#            legend.title = "treatment")
+# dev.off()
+# 
+# pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_high_history.pdf")
+# ggsurvplot(survfit(surv_F3_MEANS_high ~ Larvae_pCO2, binary_df_F3_MEANS_high), 
+#            risk.table = F, pval = F , conf.int = TRUE,
+#            palette = alpha(c("forestgreen","orange", "purple"), c(1,0.8,0.3)), 
+#            break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+#            legend.title = "treatment")
+# dev.off()
 
 ```
 run cox proportional test
 include tank as a random effect
 ```{r}
-library(coxme)
 
 # remove "none" and the level - for some reason this lingered, dont know why
 str(binary_df_F3_all) # before running, youll see PArent_pCO2 has 4 levels - we only want 3!
@@ -512,20 +881,21 @@ str(binary_df_F3_all) # youll see now its fixed
 # now run the model
 
 survFitME_all_tank <- coxme(surv_F3_all ~ Larvae_pCO2*Parent_pCO2 + (1|Tank), binary_df_F3_all)
-summary(survFitME_all_tank)
+summary(survFitME_all_tank) 
 
 #The standard deviation of the tank random effect is very small (0.015) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (527597), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
-
-```
-
-```{r}
-
 
 #pairwise comparisons
 
 library(multcomp)
 
 glht(survFitME_all_tank, linfct = mcp(Parent_pCO2 = "Dunnett"),alternative = "greater")
+
+# Linear Hypotheses:
+#                               Estimate
+# Moderate pCO2 - Low pCO2 <= 0 -0.03719
+# High pCO2 - Low pCO2 <= 0     -0.07600
+
 
 ```
 

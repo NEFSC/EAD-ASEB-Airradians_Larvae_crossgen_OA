@@ -85,22 +85,22 @@ Rep_Summary_all <- df %>% dplyr::select(c(Generation, Year,  Run, Parent_pCO2, L
 # Run 4 == Generation 2 matched parent x offspring exposure for the multigenerational rearing 
 # Run 6 == Generation 3  full cross parent x offspring exposure *** TARGET FOR THIS PAPER! 
 
-Rep_Summary_R1 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 1) # for the other paper - full grow out multigenerational
+Rep_Summary_R1 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 1) # larval [hase pf ] grow out multigenerational
 Rep_Summary_R1 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
-Rep_Summary_R2 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 2) # for the other paper - full grow out multigenerational
+Rep_Summary_R2 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 2) # larval phase of grow out multigenerational
 Rep_Summary_R2 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
 
-Rep_Summary_R3 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 3) # WE WANT TO RUN ANALYSIS AND PLOT THESE DATA
+Rep_Summary_R3 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 3) #  full cross design 
 Rep_Summary_R3 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
 
-Rep_Summary_R4 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 4) # for the other paper - full grow out multigenerational
+Rep_Summary_R4 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 4) # larval phase of grow out multigenerational
 Rep_Summary_R4 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
 
-Rep_Summary_R6 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 6) # WE WANT TO RUN ANALYSIS AND PLOT THESE DATA
+Rep_Summary_R6 <- Rep_Summary_all %>%  dplyr::filter(Run %in% 6) # full cross design - match parent x pffspring contributed to F3s juvenile grow out
 Rep_Summary_R6 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
 ```

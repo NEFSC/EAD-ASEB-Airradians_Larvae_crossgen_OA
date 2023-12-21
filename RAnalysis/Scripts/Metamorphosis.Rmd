@@ -22,7 +22,7 @@ library(FSA)
 
 ```{r}
 #Set Path
-setwd("C:/Users/katherine.mcfarland/Documents/Acidification/2020 OAP - scallops/R")
+setwd("C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Data")
 ```
 
 ### Load Data

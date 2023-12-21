@@ -142,33 +142,14 @@ for(i in 8:nrow(folder.names.table)) { # for every subfolder 'i' :::::::::::::::
             
     
     
-    
-    
-    
-    if (folder.names.table[i,] == '20210930'){
-      Resp.Data_15sec = Resp.Data_15sec  %>%  dplyr::filter(minutes < 40) # SDR data is already taken every 15 seconds, truncate for < 40 minutes in runs as the records start to show noise and undesirable data for O2 consumption (ran whole record and observed ALL Lolin plots to make this decision) 
-     } else if (folder.names.table[i,] == '20220830' & substr(file.names.table[m,], 5,7) == '799'){
-       Resp.Data_15sec = Resp.Data_15sec  %>%  dplyr::filter(minutes >25 & minutes < 120) # plate 1 SDR 799 for 8/30/22 data, ran for ~200 minutes with a dropoff below 5-6 mgL after 120-150 minutes (omit due to hypocia) and noise as the start ( omit before 25 minutes)
-     } else if (folder.names.table[i,] == '20220830' & substr(file.names.table[m,], 5,7) == '873'){
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes >15)  # 60 minute file and all data is very stable, a bit of noise initialy and omitted here
-     } else if (folder.names.table[i,] == '20220922' & (gsub(".*_raw.","", file.names.table[m,]) == "txt")) { # call all runs with the LoLigo system on 20220922
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 20 & minutes < 50) # call between miutes 20 and 50 of the trials - took time to start in order to close chambers and channels stopped once below defined threshold (80 % a.s.)
-     } else if (folder.names.table[i,] == '20220922' & (gsub(".*\\.","", file.names.table[m,]) == "csv")) { # call all runs with the SDR SensorDish system on 20220922 (.csv files)
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 10 & minutes < 50) # call data after 10 minutes
-     } else if (folder.names.table[i,] == '20221026') { 
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 10 & minutes < 60) # call data after 10 minutes
-     } else if (folder.names.table[i,] == '20221116') { 
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes < 75) # call data before minute 75 (when most reached 80% a.s. and finished), also the starting data was very clean in these runs!
-     } else if (folder.names.table[i,] == '20230131') { 
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes < 30) # call data before minute 30 minutes (when most reached 80% a.s. and finished)
-     } else if (folder.names.table[i,] == '20230223') { 
-       Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes < 40) # call data before minute 30 minutes (when most reached 80% a.s. and finished)
-     } else if (folder.names.table[i,] == '20230316') { 
-       Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 60 & minutes < 160) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
-     } else if (folder.names.table[i,] == '20230327') { 
-       Resp.Data_15sec = Resp.Data_15sec %>% dplyr::filter(minutes > 15 & minutes < 60)  # calls data < 60 minutes to truncate (partially) befire we reoxugenated the system for certain channels
-     } else if (folder.names.table[i,] == '20230407') { 
-       Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 20 & minutes < 120) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
+    if (folder.names.table[i,] == '20220420'){
+      Resp.Data_15sec = Resp.Data_15sec %>% dplyr::filter(minutes > 50 & minutes < 100)  # this was run overnight, D-hinge larvaetook very long to respire 
+     } else if (folder.names.table[i,] == '20230407' & file.names.table[m,] == "SDR_799_resp_Plate1.csv") { 
+       Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 150 & minutes < 250) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
+     } else if (folder.names.table[i,] == '20230407' & file.names.table[m,] == "SDR_873_resp_Plate2.csv") { 
+       Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 150 & minutes < 250) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
+     } else if (folder.names.table[i,] == '20230407' & file.names.table[m,] == "SDR_979_resp_Plate3.csv") { 
+       Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 20 & minutes < 60) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
      } else if (folder.names.table[i,] == '20230412') { 
        Resp.Data_15sec = Resp.Data_15sec %>% dplyr::filter(minutes < 30)  # note the log for this data started late after the plates wer loaded (1 hour later) - call 30 minutes of the very linear record to get data at highest DO
      } else if (folder.names.table[i,] == '20230421') { 
@@ -177,14 +158,12 @@ for(i in 8:nrow(folder.names.table)) { # for every subfolder 'i' :::::::::::::::
        Resp.Data_15sec = Resp.Data_15sec[seq(1, nrow(Resp.Data_15sec), 4), ] %>% dplyr::filter(minutes > 15 & minutes < 40) # calls data every minute to reduce load time - here we truncate where we have a linear trend and does not dip below hypoxia
      } else { # note this should only call the txt files in 20211026 as there are no .csv files in 20210914
           # Resp.Data_15sec = Resp.Data %>%  dplyr::filter(minutes > 30 & minutes < 90)# for now we will run the whole dataset to see...
-          Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 30 & minutes < 90)# for now we will run the whole dataset to see...
-          Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 60)# 20200829 larve data, omit the linital and target the remaining 
           Resp.Data_15sec = Resp.Data_15sec %>%  dplyr::filter(minutes > 60)# 20200829 larve data, omit the linital and target the remaining 
         }
       # clean these column names to make things easier - first 3 characters
             
           
-  
+    
               # inside 'j' loop - for each 'raw' txt file 'm', call each O2 sensor/resp chamber 'j' for analysis
               for(j in 4:(ncol(Resp.Data_15sec))){ # for each sensor column 'j' (..starting at column 4) :::::::::::::::::::::::::::::::
               

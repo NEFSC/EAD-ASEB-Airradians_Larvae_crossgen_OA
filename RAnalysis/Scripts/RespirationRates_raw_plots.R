@@ -57,7 +57,7 @@ colnames(resp.table) <- c('Date', 'Channel', 'Lpc', 'Leq' , 'Lz', 'alpha','Filen
 # II. A bunch o' fors and if/elses - commented throughout!
 
 # outside 'i' loop - call each subfolder one at a time for analysis
-for(i in 8:nrow(folder.names.table)) { # for every subfolder 'i' ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+for(i in 1:nrow(folder.names.table)) { # for every subfolder 'i' ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # NOTE: when calling the raw files we need to accommodate the different formats
   # 20210914 used the 8-channel loligo system with raw output as .txt files with 'raw' in the title - call these using dplyr in the if/else below
   # 20210930 used the 24-channel SDR sensor dish with raw output as .csv files - call these in the if/else statement below 
@@ -191,8 +191,25 @@ for(i in 8:nrow(folder.names.table)) { # for every subfolder 'i' :::::::::::::::
                             pdf(paste0("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots_raw/",folder.names.table[i,1],"_", substr( (sub(".*M_","",file.names.table[m,1])), 1,13),"_regression.pdf"), width=10, height=12)
                             print(PLOT)
                             dev.off()
-                        
-                           
+ 
+                } else if  (folder.names.table[i,] == '20220420'){ # just for the SDR run on 20211025 .csv file 
+                  date.plot  <- folder.names.table[i,1]
+                  run.plot   <- substr((sub(".*resp_","",file.names.table[m,1])), 1, 6)
+                  plot_title <- paste(date.plot, run.plot, sep = '_')
+                  PLOT <- Resp.Data_15sec %>% 
+                    dplyr::filter(minutes < 250 & minutes > 0) %>%  #first 6 hours
+                    dplyr::select(-c('date', 'seconds')) %>%  
+                    reshape2::melt(id.vars = "minutes",variable.name = "channel", value.name = "mg.L.min") %>% 
+                    ggplot(aes(x = minutes , y = mg.L.min)) +
+                    geom_smooth(method = "loess", se=FALSE, color="black", formula = mg.L.min ~ minutes) +
+                    theme_classic() +
+                    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", plot.title = element_text(size=10))+ 
+                    labs(y = expression(RAW_mg~L^{-1}~O[2]%.%min^{-1})) +
+                    xlab("minutes") +
+                    geom_point() + 
+                    ggtitle(plot_title) +
+                    facet_wrap(~channel)                                                     
+                           View(Resp.Data_15sec)
                       } else { # just for the SDR run on 20211025 .csv file 
                         date.plot  <- folder.names.table[i,1]
                         run.plot   <- substr((sub(".*resp_","",file.names.table[m,1])), 1, 6)

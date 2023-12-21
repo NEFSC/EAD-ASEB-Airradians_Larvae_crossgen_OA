@@ -2,7 +2,9 @@
 title: "Larval Growth and Survival"
 author: "Katie McFarland"
 date: "9/29/2023"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # 20231217 - started manuscript Github repostiory 'EAD-ASEB-Airradians_Larvae_crossgen_OA'
@@ -34,7 +36,7 @@ library(survminer)
 
 
 #Larval Survival
-```{r}
+```{r, echo=FALSE}
 df<-read.csv("Data/larval_survival.csv", header = T) %>% 
   dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival)) %>% 
   dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
@@ -229,7 +231,7 @@ head(binary_df_F1_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "
 
 ```
 
-```{r F1 build surv object and plot 'em}
+```{r F1 build surv object and plot em}
 
 
 # (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
@@ -417,7 +419,7 @@ head(binary_df_F2_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "
 
 ```
 
-```{r F2 build surv object and plot 'em}
+```{r F2 build surv object and plot em}
 
 
 # (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
@@ -832,7 +834,7 @@ surv_F3_MEANS_high  <- Surv(time = as.numeric(binary_df_F3_MEANS_high$Age),
 
 ```
 
-```{r F3 plot 'em}
+```{r F3 plot em}
 
 pdf("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Survival/F3_survival.pdf", width = 10)
 ggsurvplot(survfit(surv_F3_MEANS ~ Larvae_pCO2, binary_df_F3_MEANS), 
@@ -882,6 +884,24 @@ str(binary_df_F3_all) # youll see now its fixed
 
 survFitME_all_tank <- coxme(surv_F3_all ~ Larvae_pCO2*Parent_pCO2 + (1|Tank), binary_df_F3_all)
 summary(survFitME_all_tank) 
+#                                                           coef exp(coef)   se(coef)     z
+# Larvae_pCO2Moderate pCO2                          -0.025569607 0.9747545 0.01848915 -1.38
+# Larvae_pCO2High pCO2                               0.009866940 1.0099158 0.01873860  0.53
+# Parent_pCO2Moderate pCO2                          -0.037194870 0.9634884 0.01855713 -2.00
+# Parent_pCO2High pCO2                              -0.076000227 0.9268160 0.01845043 -4.12
+# Larvae_pCO2Moderate pCO2:Parent_pCO2Moderate pCO2  0.030348803 1.0308140 0.02614267  1.16
+# Larvae_pCO2High pCO2:Parent_pCO2Moderate pCO2      0.008771872 1.0088105 0.02630283  0.33
+# Larvae_pCO2Moderate pCO2:Parent_pCO2High pCO2      0.035694517 1.0363392 0.02605141  1.37
+# Larvae_pCO2High pCO2:Parent_pCO2High pCO2          0.006232918 1.0062524 0.02611643  0.24
+p
+ 1.7e-01
+     6.0e-01
+  4.5e-02
+    3.8e-05
+ 2.5e-01
+   7.4e-01
+ 1.7e-01
+  8.1e-01
 
 #The standard deviation of the tank random effect is very small (0.015) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (527597), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
 

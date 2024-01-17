@@ -206,15 +206,40 @@ F2_Dinge_boxpots <- RR_master_F2_Dhinge %>%   # omits a single dramatic outlier
                                   facet_wrap(~pCO2_parents)
 
 # OUTPUT THE PLOT
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/F2_RR_larvae.pdf"), width = 5, height = 5)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/F2_RR_larvae.pdf"), width = 6, height = 4)
 print(F2_Dinge_MeanSE)
 dev.off()
 
 
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/F2_RR_larvae_boxplots.pdf"), width = 5, height = 5)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/F2_RR_larvae_boxplots.pdf"), width = 6, height = 4)
 print(F2_Dinge_boxpots)
 dev.off()
 ```
+
+## F2 stats 
+
+```{r F2 stats}
+
+F2_DF_mean_tank <- RR_master_F2_Dhinge %>% 
+                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+
+F2_TwoWayANOVA <- lm(mean_RR~pCO2_parents*pCO2_offspring, data=F2_DF_mean_tank)
+shapiro.test(resid(F2_TwoWayANOVA)) # 0.3896
+leveneTest(F2_TwoWayANOVA) # 0.8975
+summary(aov(F2_TwoWayANOVA))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents                 1 2.057e-09 2.057e-09   3.100  0.112
+# pCO2_offspring               2 5.980e-10 2.990e-10   0.451  0.651
+# pCO2_parents:pCO2_offspring  2 6.520e-10 3.259e-10   0.491  0.627
+# Residuals                    9 5.973e-09 6.637e-10
+```
+
 
 # F3 figures all merged!
 
@@ -495,6 +520,156 @@ print(ggarrange(Gen3_MEANSE_Dhinge,Gen3_MEANSE_day7,Gen3_MEANSE_day16, nrow =3))
 dev.off() 
          
 
+
+F3_Dinge_boxpots <- F3_DF %>% dplyr::filter(Date %in%"4/7/2023") %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("F3 Dhinge") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                                  facet_wrap(~pCO2_parents)
+
+
+F3_day7_boxpots <- F3_DF %>% dplyr::filter(Date %in%"4/12/2023") %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("F3 day 7") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                                  facet_wrap(~pCO2_parents)
+
+F3_day16_boxpots <- F3_DF %>% dplyr::filter(Date %in%"4/21/2023") %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("F3 day 16") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                                  facet_wrap(~pCO2_parents)
+
+pdf(paste0("C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/F3_RR_larvae_boxplots.pdf"), width=8, height=12) 
+print(ggarrange(F3_Dinge_boxpots,F3_day7_boxpots,F3_day16_boxpots, nrow =3))
+dev.off() 
+
+```
+
+
+
+## F3 stats 
+
+```{r F3 stats}
+
+F3_DF_mean_tank <- F3_DF %>% 
+                          dplyr::select(Date, pCO2_parents, pCO2_offspring, Chamber_tank, resp_umol_hr_indiv) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                          dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                           n       = n(),
+                                           sd_RR   = sd(resp_umol_hr_indiv),
+                                           se_RR   = sd_RR/(sqrt(n)))
+
+
+F3_DF_dhinge <- F3_DF_mean_tank %>% dplyr::filter(Date %in%"4/7/2023") 
+F3_DF_day7   <- F3_DF_mean_tank %>% dplyr::filter(Date %in%"4/12/2023")
+F3_DF_day16  <- F3_DF_mean_tank %>% dplyr::filter(Date %in%"4/21/2023")
+
+F3_TwoWayANOVA_dhinge <- lm(mean_RR~pCO2_parents*pCO2_offspring, data=F3_DF_dhinge)
+shapiro.test(resid(F3_TwoWayANOVA_dhinge)) # 0.1789
+leveneTest(F3_TwoWayANOVA_dhinge) # 0.7962
+summary(aov(F3_TwoWayANOVA_dhinge))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents                 2 3.886e-08 1.943e-08   2.137  0.147
+# pCO2_offspring               2 1.100e-09 5.520e-10   0.061  0.941
+# pCO2_parents:pCO2_offspring  4 7.604e-08 1.901e-08   2.091  0.124
+# Residuals                   18 1.636e-07 9.089e-09 
+
+F3_TwoWayANOVA_day7 <- lm(mean_RR~pCO2_parents*pCO2_offspring, data=F3_DF_day7)
+shapiro.test(resid(F3_TwoWayANOVA_day7)) # 6.619e-05
+leveneTest(F3_TwoWayANOVA_day7) # 0.319
+F3_SRH_day7         <- scheirerRayHare(mean_RR~pCO2_parents*pCO2_offspring, data=F3_DF_day7)
+#                             Df  Sum Sq       H p.value
+# pCO2_parents                 2   72.67 1.15344 0.56174
+# pCO2_offspring               2   44.67 0.70899 0.70153
+# pCO2_parents:pCO2_offspring  4   69.33 1.10053 0.89419
+# Residuals                   18 1451.33
+
+
+
+
+F3_TwoWayANOVA_day16 <- lm(mean_RR~pCO2_parents*pCO2_offspring, data=F3_DF_day16)
+shapiro.test(resid(F3_TwoWayANOVA_day16)) # 0.6191
+leveneTest(F3_TwoWayANOVA_day16) # 0.8498
+summary(aov(F3_TwoWayANOVA_day16))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents                 2 6.314e-08 3.157e-08   1.241  0.334
+# pCO2_offspring               2 3.560e-09 1.780e-09   0.070  0.933
+# pCO2_parents:pCO2_offspring  3 9.866e-08 3.289e-08   1.293  0.335
+# Residuals                    9 2.289e-07 2.544e-08
 ```
 
 

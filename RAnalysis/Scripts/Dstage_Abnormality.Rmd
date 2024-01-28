@@ -71,7 +71,7 @@ str(df)
 ```{r about data}
 
 # number of runs 
-unique(df$Run) # 1,2,3,4,6 - what are these?
+unique(df$Run) # 1,2,3,4,6 - what are these? - Run = the different larval experiments, Runs 1-2 = larvae experiments, Runs 3-5 = F2 larvae experiments, and Run 6 = F3 larval experimentss. Runs 2, 4, and 6 went on to be raised in the flow through system. 
 unique(df$Generation) # 1, 2, 3 - generations for larval exposures 
 
 Rep_Summary_all <- df %>% dplyr::select(c(Generation, Year,  Run, Parent_pCO2, Larvae_pCO2)) %>% 

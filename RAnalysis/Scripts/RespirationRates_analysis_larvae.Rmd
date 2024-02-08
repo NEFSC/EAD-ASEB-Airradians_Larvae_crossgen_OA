@@ -107,7 +107,7 @@ RR_master_Exp3$pCO2_offspring <- factor(RR_master_Exp3$pCO2_offspring, levels = 
 
 # Summarise Percent Deformities for plotting 
 Exp3_mean_tank    <- RR_master_Exp3 %>% 
-                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
                             dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
                             dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
                             dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
@@ -233,41 +233,79 @@ Exp3_mean_tank <- RR_master_Exp3 %>%
                                              n       = n(),
                                              sd_RR   = sd(mean_RR),
                                              se_RR   = sd_RR/(sqrt(n)))
+Exp3_mean_T1 <- Exp3_mean_tank %>% dplyr::filter(Date %in% '4/20/2022')
+Exp3_mean_T2 <- Exp3_mean_tank %>% dplyr::filter(Date %in% '4/22/2022')
 
 Exp3_TwoWayANOVA_T1 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
-                          data=(Exp3_mean_tank %>% 
-                                  dplyr::filter(Date %in% '4/20/2022')))
+                          data=(Exp3_mean_T1))
 shapiro.test(resid(Exp3_TwoWayANOVA_T1)) # 0.4181
 leveneTest(Exp3_TwoWayANOVA_T1) # 0.3977
-summary(aov(Exp3_TwoWayANOVA_T1))
-#                             Df    Sum Sq   Mean Sq F value Pr(>F)
-# pCO2_parents                 2 3.360e-10 1.682e-10   0.155  0.859
-# pCO2_offspring               2 9.230e-10 4.614e-10   0.425  0.668
-# pCO2_parents:pCO2_offspring  3 2.053e-09 6.844e-10   0.630  0.616
-# Residuals                    8 8.686e-09 1.086e-09
+Exp3_SRH_T1 <- scheirerRayHare(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp3_mean_T1))
+Exp3_SRH_T1 # n.s.
 
+
+Exp6_OneANOVA_T1_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_LOW)) # 0.3005
+leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
+summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
+
+Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
+leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
+summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
+
+Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_HIGH)) # pass
+leveneTest(Exp6_OneANOVA_T1_HIGH) # pass
+summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
+
+
+
+
+
+# time point 2  4/12/2023
 Exp3_TwoWayANOVA_T2 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
-                          data=(Exp3_mean_tank %>% 
-                                  dplyr::filter(Date %in% '4/22/2022')))
+                          data=(Exp3_mean_T2))
 shapiro.test(resid(Exp3_TwoWayANOVA_T2)) # 0.1103
 leveneTest(Exp3_TwoWayANOVA_T2) # 0.8943
-summary(aov(Exp3_TwoWayANOVA_T2))
-#                Df    Sum Sq   Mean Sq F value Pr(>F)
-# pCO2_parents    2 4.294e-09 2.147e-09   0.746  0.573
-# pCO2_offspring  1 7.751e-09 7.751e-09   2.692  0.243
-# Residuals       2 5.758e-09 2.879e-09 
+summary(aov(Exp3_TwoWayANOVA_T2)) # marginal effect of pCO2 offsrping
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)  
+# pCO2_parents                 2 6.350e-08 3.177e-08   0.580  0.574  
+# pCO2_offspring               2 3.284e-07 1.642e-07   2.997  0.085 .
+# pCO2_parents:pCO2_offspring  4 4.573e-07 1.143e-07   2.087  0.141  
+# Residuals                   13 7.122e-07 5.479e-08
 
 
 
-Exp3_OneANOVA_T1LOW <- lm(mean_RR~pCO2_offspring, 
-                          data=(Exp3_mean_tank %>% 
-                                  dplyr::filter(Date %in% '4/20/2022' & pCO2_parents %in% '500 uatm')))
-shapiro.test(resid(Exp3_OneANOVA_T1LOW)) # 0.2216
-leveneTest(Exp3_OneANOVA_T1LOW) # 0.8042
-summary(aov(Exp3_OneANOVA_T1LOW))
-#                Df    Sum Sq   Mean Sq F value Pr(>F)
-# pCO2_offspring  2 6.270e-10 3.133e-10   0.284  0.767
-# Residuals       4 4.415e-09 1.104e-09
+Exp3_OneANOVA_T2_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_LOW)) # pass
+leveneTest(Exp3_OneANOVA_T2_LOW) # pass
+summary(aov(Exp3_OneANOVA_T2_LOW)) # n.s.
+
+Exp3_OneANOVA_T2_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_MOD)) # no pass
+leveneTest(Exp3_OneANOVA_T2_MOD) # pass
+summary(aov(Exp3_OneANOVA_T2_MOD))
+
+Exp3_OneANOVA_T2_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_HIGH)) # pass
+leveneTest(Exp3_OneANOVA_T2_HIGH) # pass
+summary(aov(Exp3_OneANOVA_T2_HIGH)) # marginal effect
+TukeyHSD(aov(Exp3_OneANOVA_T2_HIGH))
+
 ```
 
 ## Figures for Experiment # 5 
@@ -676,7 +714,7 @@ summary(aov(Exp6_OneANOVA_T2_HIGH)) # n.s.
 
 
 
-# time point 1  4/12/2023
+# time point 3  4/21/2023
 Exp6_TwoWayANOVA_T3 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
                           data=(Exp6_mean_T3))
 shapiro.test(resid(Exp6_TwoWayANOVA_T3)) # pass

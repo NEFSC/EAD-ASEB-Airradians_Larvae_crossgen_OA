@@ -211,12 +211,12 @@ Exp3_boxpots <- RR_master_Exp3 %>%   # omits a single dramatic outlier
                                   facet_wrap(~pCO2_parents)
 
 # OUTPUT THE PLOT
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_MeanSE.pdf"), width = 6, height = 4)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_MeanSE.pdf"), width = 6, height = 6)
 print(Exp3_MeanSE)
 dev.off()
 
 
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_barplots.pdf"), width = 6, height = 4)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_barplots.pdf"), width = 6, height = 6)
 print(Exp3_barplot)
 dev.off()
 ```
@@ -568,12 +568,12 @@ Exp6_boxpots <- RR_master_Exp6 %>%   # omits a single dramatic outlier
                                   facet_wrap(~pCO2_parents)
 
 # OUTPUT THE PLOT
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_MeanSE.pdf"), width = 6, height = 4)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_MeanSE.pdf"), width = 6, height = 8)
 print(Exp6_MeanSE)
 dev.off()
 
 
-pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_barplots.pdf"), width = 6, height = 4)
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_barplots.pdf"), width = 6, height = 8)
 print(Exp6_barplot)
 dev.off()
 ```

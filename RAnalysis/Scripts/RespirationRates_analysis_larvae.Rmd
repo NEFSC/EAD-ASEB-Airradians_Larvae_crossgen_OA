@@ -58,13 +58,20 @@ RR_master_Exp3  <- RR_master %>%
   dplyr::filter(Date %in% c('4/20/2022','4/22/2022')) %>% 
   dplyr::mutate(Experiment = 2)
 
+write.csv(RR_master_Exp3, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_3.csv")
+
+
 RR_master_Exp5  <- RR_master %>% 
   dplyr::filter(Date %in% '3/16/2023') %>% 
   dplyr::mutate(Experiment = 5)
 
+write.csv(RR_master_Exp5, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_5.csv")
+
 RR_master_Exp6   <- RR_master %>% 
   dplyr::filter(Date %in% c('4/7/2023', '4/12/2023','4/21/2023')) %>% 
   dplyr::mutate(Expeirment = 6)
+
+write.csv(RR_master_Exp6, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_6.csv")
 ```
 
 # DATA ANALYSIS
@@ -81,11 +88,15 @@ Exp3_SumTable <- RR_master_Exp3 %>%
                       dplyr::arrange(resp_umol_hr_indiv)
 Exp3_SumTable # lowest are naive parents under mid and high; highest are habituated parents under low!
 
+write.csv(Exp3_SumTable, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_3_meansbytank.csv")
+
+
 Exp5_SumTable <- RR_master_Exp5 %>%  
                       summarySE(measurevar="resp_umol_hr_indiv", 
                                 groupvars=c("Date","pCO2_parents", "pCO2_offspring")) %>% 
                       dplyr::arrange(resp_umol_hr_indiv)
 Exp5_SumTable
+write.csv(Exp5_SumTable, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_5_meansbytank.csv")
 
 
 Exp6_SumTable <- RR_master_Exp6 %>%  
@@ -93,6 +104,7 @@ Exp6_SumTable <- RR_master_Exp6 %>%
                       groupvars=c("Date","pCO2_parents", "pCO2_offspring")) %>% 
             dplyr::arrange(resp_umol_hr_indiv)
 Exp6_SumTable
+write.csv(RR_master_Exp6, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_6_meansbytank.csv")
 
 ```
 

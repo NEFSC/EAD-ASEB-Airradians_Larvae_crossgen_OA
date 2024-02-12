@@ -80,7 +80,6 @@ resp.data_merged                       <- merge(resp.data, resp.ref) %>% # merge
 nrow(resp.data_merged) # 720
 ```
 
-
 #### Calculate blank rates, calc means by day pH_treatment
 
 * what does this mean? 
@@ -106,6 +105,13 @@ blanks_all_raw <- resp.data_merged %>% # data.frame((merge(resp_all_raw, resp.re
                   dplyr::arrange(Date, pH, .by_group = TRUE)
 
 write.csv(blanks_all_raw, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_blanks_raw_larvae.csv")
+
+
+blanks_all_raw %>% group_by(Date,pH) %>% 
+  dplyr::filter(Date %in% c('4/20/2022','4/22/2022', # expeirment 3
+                            '3/16/2023', # Experiment 5
+                            '4/7/2023', '4/12/2023','4/21/2023')) %>% # Experient # 6
+  dplyr::summarise(count= n())
 
 
 # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

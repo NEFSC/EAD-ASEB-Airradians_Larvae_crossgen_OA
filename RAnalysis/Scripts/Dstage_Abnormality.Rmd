@@ -10,8 +10,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
-# knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+ knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 ```
 
 ```{r, echo=FALSE}
@@ -29,12 +29,13 @@ library(ggpubr)
 
 ### Load Data as df
 ```{r}
-#Here we are assing our data fram the name "df" so that we do not have to type out the full file name everytime we want to call it.
+#Here we are assessing our data frame the name "df" so that we do not have to type out the full file name every time we want to call it.
 df<-read.csv("Data/Dstage.data.csv", header = T) %>% 
   # change to numeric for the DV and as factor for IDVs
   dplyr::mutate(Percent.deformed = as.numeric(Percent.deformed),
                 Rep              = as.factor(Rep),
                 Year             = as.factor(Year),
+                Generation       = as.factor(Generation),
                 Run              = as.factor(Run)) %>% 
   
   # rename the variables for consistancy using 'case_when'
@@ -71,7 +72,7 @@ str(df)
 ```{r about data}
 
 # number of runs 
-unique(df$Run) # 1,2,3,4,6 - what are these? - Run = the different larval experiments, Runs 1-2 = larvae experiments, Runs 3-5 = F2 larvae experiments, and Run 6 = F3 larval experimentss. Runs 2, 4, and 6 went on to be raised in the flow through system. 
+unique(df$Run) # 1,2,3,4,6 - what are these? - Run = the different larval experiments, Runs 1-2 = larvae experiments, Runs 3-5 = F2 larvae experiments, and Run 6 = F3 larval experiments. Runs 2, 4, and 6 went on to be raised in the flow through system. 
 unique(df$Generation) # 1, 2, 3 - generations for larval exposures 
 
 Rep_Summary_all <- df %>% dplyr::select(c(Generation, Year,  Run, Parent_pCO2, Larvae_pCO2)) %>% 
@@ -107,16 +108,20 @@ Rep_Summary_R6 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria
 
 # Truncate desired data - parent x larvae full cross experiments on gens 2 and 3
 ```{r call target datasets}
+#full factorial experiments
 df_Gen2 <- df %>% filter(Run=="3") # Gen 2 run 3 - summarized above, full cross parent x larvae for this repo
 df_Gen3 <- df %>% filter(Run=="6") # Gen 3 run 6 - summarized above, full cross parent x larvae for this repo
+
+#single parentage experiments
+df_Run1 <- df %>% filter(Run=="1") # Gen 1 run 1 - summarized above, 
+df_Run2 <- df %>% filter(Run=="2") # Gen 1 run 2 - summarized above, 
+df_Run4 <- df %>% filter(Run=="4") # Gen 2 run 2 - summarized above, 
 ```
 
 # Plot data as barplots mean +- SE for each run
 ```{r average and barplots}
 
-
-
-# Summarise Percent Deformities for plotting 
+# Summarize Percent Deformities for plotting 
 Gen2_mean_deformaties <- df_Gen2 %>% 
                           dplyr::select(Parent_pCO2,Larvae_pCO2,Percent.deformed) %>% 
                           na.omit() %>% 
@@ -225,7 +230,7 @@ multcomp::cld(aovMOD_Gen2_posthoc$emmeans,alpha = 0.5, Letters = letters)
 ### * why do this? - we see that high exposure had an overarching effect on percent deformities when looking at all data, was a particular history affected by this encounter significantly as to others? Technically this should come out via an interaction but still of merit to explore here
 ```{r Gen 2 within history} 
 
-# dataframes filterered for history 
+# dataframes filtered for history 
 df_Gen2_LOWhist  <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "Low pCO2")
 df_Gen2_MODhist  <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "Moderate pCO2")
 df_Gen2_HIGHhist <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "High pCO2")
@@ -254,13 +259,24 @@ summary(aov(aovMOD_Gen2_LOW))
 # Larvae_pCO2  2 1.3093  0.6547   282.2 1.16e-06 ***
 # Residuals    6 0.0139  0.0023
 
+#posthoc
+aovMOD_Gen2_LOW_posthoc <- emmeans(aovMOD_Gen2_MOD, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Gen2_LOW_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
 summary(aov(aovMOD_Gen2_MOD))
 #             Df Sum Sq Mean Sq F value   Pr(>F)    
 # Larvae_pCO2  2 1.0260  0.5130    44.9 0.000246 ***
 # Residuals    6 0.0686  0.0114
 
+#posthoc
+aovMOD_Gen2_MOD_posthoc <- emmeans(aovMOD_Gen2_MOD, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Gen2_MOD_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
 aovKW_Gen2_HIGH
 # Kruskal-Wallis chi-squared = 5.6, df = 2, p-value = 0.06081
+dunnTest(Percent.deformed ~ Larvae_pCO2,
+                data = df_Gen2_HIGHhist,
+              method="bh")
 
 # Conclusion 
 # Low and Moderate history show a significant affect of larvae pCO2 on percent deformities
@@ -339,7 +355,96 @@ summary(aov(aovMOD_Gen3_HIGH))
 # Moderate and High history are unaffected by larvae pCO2
 ```
 
+```{r}
+#for manuscript 1 (exp 1, 2, 4)
+df_MS_1 <- df %>% filter(Run %in% c("1", "2", "4"))
+df_MS_1
+head(df_MS_1)
+tail(df_MS_1)
 
+df_MS_1_Low <- df_MS_1 %>% filter(Larvae_pCO2 == "Low pCO2")
+
+aovMOD_MS_1_Low <- lm(Percent.deformed ~ Generation, data=df_MS_1_Low)
+shapiro.test(resid(aovMOD_MS_1_Low)) # 0.9707 - norm
+leveneTest(aovMOD_MS_1_Low) # 0.7656- pass
+  summary(aov(aovMOD_MS_1_Low))
+#            Df   Sum Sq  Mean Sq F value Pr(>F)  
+#Generation   1 0.003481 0.003481   4.174 0.0683 .
+#Residuals   10 0.008340 0.000834 
+  
+#aovMOD_MS_1_Low_posthoc <- emmeans(aovMOD_MS_1_Low, pairwise~Generation, adjust="tukey")
+#multcomp::cld(aovMOD_MS_1_Low_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
+
+df_MS_1_Mod <- df_MS_1 %>% filter(Larvae_pCO2 == "Moderate pCO2")
+
+aovMOD_MS_1_Mod <- lm(Percent.deformed ~ Generation, data=df_MS_1_Mod)
+shapiro.test(resid(aovMOD_MS_1_Mod)) # 0.05838 - norm
+leveneTest(aovMOD_MS_1_Mod) # 0.8808- pass
+  summary(aov(aovMOD_MS_1_Mod))
+#            Df  Sum Sq  Mean Sq F value Pr(>F)
+#Generation   1 0.00452 0.004517   0.994  0.345
+#Residuals    9 0.04088 0.004542  
+  
+#aovMOD_MS_1_Mod_posthoc <- emmeans(aovMOD_MS_1_Mod, pairwise~Generation, adjust="tukey")
+#multcomp::cld(aovMOD_MS_1_Mod_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
+
+ggplot(data=df_MS_1, aes(x=Larvae_pCO2, y=Percent.deformed, fill=Larvae_pCO2)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed ", x ="Treatment", y = "Percent Deformed")+
+  facet_wrap("Run")
+```
+# Comparison among generations within history
+```{r } 
+
+# dataframes filterered for history 
+df_LOW  <- df %>%  dplyr::filter(Parent_pCO2 == "Low pCO2")
+  df_LOW  <- df %>%  dplyr::filter(Larvae_pCO2 == "Low pCO2")
+df_MOD  <- df %>%  dplyr::filter(Parent_pCO2 == "Moderate pCO2")
+  df_MOD  <- df %>%  dplyr::filter(Larvae_pCO2 == "Moderate pCO2")
+df_HIGH <- df %>%  dplyr::filter(Parent_pCO2 == "High pCO2")
+  df_HIGH <- df %>%  dplyr::filter(Larvae_pCO2 == "High pCO2")
+
+# Run mods 
+aovMOD_LOW  <- lm(Percent.deformed ~ Generation, data=df_LOW)
+aovMOD_MOD  <- lm(Percent.deformed ~ Generation, data=df_MOD)
+aovMOD_HIGH <- lm(Percent.deformed ~ Generation, data=df_HIGH)
+
+# check assumptions
+shapiro.test(resid(aovMOD_LOW)) # 0.06938 - norm
+leveneTest(aovMOD_LOW)  # 0.01605 *  - FAIL
+
+shapiro.test(resid(aovMOD_MOD)) # 0.4408 - norm
+leveneTest(aovMOD_MOD) # 0.2822 - pass
+
+shapiro.test(resid(aovMOD_HIGH)) # 0.03991 - norm
+leveneTest(aovMOD_HIGH) # 0.0716 - pass
+
+# Summary models 
+library(Rmisc)
+
+summary(aov(aovMOD_LOW))
+aovMOD_LOW_posthoc <- emmeans(aovMOD_LOW, pairwise~Generation, adjust="tukey")
+multcomp::cld(aovMOD_LOW_posthoc$emmeans,alpha = 0.5, Letters = letters)
+  summarySE(df_LOW, measurevar="Percent.deformed", groupvars=c("Generation"))
+  
+summary(aov(aovMOD_MOD))
+aovMOD_MOD_posthoc <- emmeans(aovMOD_MOD, pairwise~Generation, adjust="tukey")
+multcomp::cld(aovMOD_MOD_posthoc$emmeans,alpha = 0.5, Letters = letters)
+  summarySE(df_MOD, measurevar="Percent.deformed", groupvars=c("Generation"))
+  
+summary(aov(aovMOD_HIGH))
+aovMOD_HIGH_posthoc <- emmeans(aovMOD_HIGH, pairwise~Generation, adjust="tukey")
+multcomp::cld(aovMOD_HIGH_posthoc$emmeans,alpha = 0.5, Letters = letters)
+  summarySE(df_HIGH, measurevar="Percent.deformed", groupvars=c("Generation"))
+
+
+# Conclusion 
+
+```
 
 ```{r}
 df$Percent.deformed_trans <- asin(sqrt(df$Percent.deformed))
@@ -347,19 +452,42 @@ df$Percent.deformed_trans <- asin(sqrt(df$Percent.deformed))
 leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df)
 shapiro.test(df$Percent.deformed_trans)
 ```
+# Stats for runs with single parentage
+```{r}
+aovMOD_Run1 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Run1)
+shapiro.test(resid(aovMOD_Run1)) # 0.4186 - norm
+leveneTest(aovMOD_Run1) # 0.4478- pass
+summary(aov(aovMOD_Run1))
+aovMOD_Run1_posthoc <- emmeans(aovMOD_Run1, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Run1_posthoc$emmeans,alpha = 0.5, Letters = letters)
 
+aovMOD_Run2 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Run2)
+shapiro.test(resid(aovMOD_Run2)) # 0.2499 - norm
+leveneTest(aovMOD_Run2) # 0.4246- pass
+summary(aov(aovMOD_Run2))
+aovMOD_Run2_posthoc <- emmeans(aovMOD_Run2, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Run2_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
+aovMOD_Run4 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Run4)
+shapiro.test(resid(aovMOD_Run4)) # 0.2875 - norm
+leveneTest(aovMOD_Run4) # 0.5552- pass
+summary(aov(aovMOD_Run4))
+aovMOD_Run4_posthoc <- emmeans(aovMOD_Run4, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Run4_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
+```
 
 
 # Stats across genrations
-Data did not meet the assumptions of normality so the non parametric Scheirer Ray Hare test was used to test for signifcance among treatments and prental exposures.
+Data did not meet the assumptions of normality so the non parametric Scheirer Ray Hare test was used to test for significance among treatments and parental exposures.
 ```{r}
-scheirerRayHare(Percent.deformed ~ Treatment*Run,
+scheirerRayHare(Percent.deformed ~ Larvae_pCO2*Run,
                 data = df)
 
-scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+scheirerRayHare(Percent.deformed ~ Larvae_pCO2*Parent_pCO2,
                 data = df)
 
-scheirerRayHare(Percent.deformed ~ Run*Parent,
+scheirerRayHare(Percent.deformed ~ Run*Parent_pCO2,
                 data = df)
 
 dunnTest(Percent.deformed ~ Run,
@@ -371,12 +499,12 @@ dunnTest(Percent.deformed ~ Run,
 ### Low parental exposure across generations (all larval treatmeents)
 ```{r}
 df_low <- df%>%
-  filter(Parent %in% c("LOW"))
+  filter(Parent_pCO2 %in% c("Low pCO2"))
 
 leveneTest(Percent.deformed_trans ~ Run, data=df_low)
 shapiro.test(df_low$Percent.deformed_trans)
 
-scheirerRayHare(Percent.deformed ~ Treatment*Run,
+scheirerRayHare(Percent.deformed ~ Larvae_pCO2*Run,
                 data = df_low)
 
 
@@ -389,15 +517,22 @@ dunnTest(Percent.deformed ~ Run,
 ```{r}
 
 df_low_low <- df_low%>%
-  filter(Treatment %in% c("Low OA"))
+  filter(Larvae_pCO2 %in% c("Low pCO2"))
 
 leveneTest(Percent.deformed_trans ~ Run, data=df_low_low)
 shapiro.test(df_low_low$Percent.deformed_trans)
 
 mod <- aov(Percent.deformed_trans ~Run, data = df_low_low)
-summary(mod)
+sum_mod<-summary(mod)
 
 TukeyHSD(mod)
+
+
+```
+```{r}
+sum_mod %>%
+   kbl(caption = "ANOVA - Low OA exposures only")%>%
+   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
 
@@ -412,7 +547,7 @@ TukeyHSD(mod)
 df_2021 <- df%>%
   filter(Year=="2021")
 
-ggplot(data=df_2021, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+ggplot(data=df_2021, aes(x=Larvae_pCO2, y=Percent.deformed, fill=Larvae_pCO2)) +
   geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
   theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
   #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
@@ -425,7 +560,7 @@ ggplot(data=df_2021, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
 df_run1 <- df%>%
   filter(Run=="1")
 
-leveneTest(Percent.deformed_trans ~ Treatment, data=df_run1)
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df_run1)
 shapiro.test(df_run1$Percent.deformed_trans)
 
 df_run2 <- df%>%
@@ -437,17 +572,17 @@ shapiro.test(df_run2$Percent.deformed_trans)
 
 
 ```{r}
-dunnTest(Percent.deformed ~ Treatment,
+dunnTest(Percent.deformed ~ Larvae_pCO2,
                 data = df_run1,
               method="bh")
-dunnTest(Percent.deformed ~ Treatment,
+dunnTest(Percent.deformed ~ Larvae_pCO2,
                 data = df_run2,
               method="bh")
 ```
 
 
 ```{r}
-leveneTest(Percent.deformed_trans ~ Treatment, data=df_2021)
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df_2021)
 shapiro.test(df_2021$Percent.deformed_trans)
 ```
 
@@ -460,30 +595,30 @@ df_2022 <- df%>%
 df_2022_3 <- df_2022%>%
   filter(Run=="3")
 
-ggplot(data=df_2022_3, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+ggplot(data=df_2022_3, aes(x=Larvae_pCO2, y=Percent.deformed, fill=Treatment)) +
   geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
   theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
   #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
   labs(title="Percent Deformed, grouped by parentage (2022: F2 Larvae) ", x ="Treatment", y = "Percent Deformed")+
-  facet_wrap("Parent")
+  facet_wrap("Parent_pCO2")
 ```
 
 
 ```{r}
-leveneTest(Percent.deformed_trans ~ Treatment, data=df_2022_3)
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df_2022_3)
 shapiro.test(df_2022_3$Percent.deformed_trans)
 ```
 
 
 ```{r}
-scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+scheirerRayHare(Percent.deformed ~ Larvae_pCO2*Parent_pCO2,
                 data = df_2022_3)
 
-dunnTest(Percent.deformed ~ Treatment,
+dunnTest(Percent.deformed ~ Larvae_pCO2,
                 data = df_2022_3,
               method="bh")
 
-dunnTest(Percent.deformed ~ Parent,
+dunnTest(Percent.deformed ~ Parent_pCO2,
                 data = df_2022_3,
               method="bh")
 ```
@@ -498,7 +633,7 @@ df_2022 <- df%>%
 df_2022_4 <- df_2022%>%
   filter(Run=="4")
 
-ggplot(data=df_2022_4, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+ggplot(data=df_2022_4, aes(x=Larvae_pCO2, y=Percent.deformed, fill=Larvae_pCO2)) +
   geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
   theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
   #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
@@ -507,13 +642,13 @@ ggplot(data=df_2022_4, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
 
 ```{r}
 
-leveneTest(Percent.deformed_trans ~ Treatment, data=df_2022_4)
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df_2022_4)
 shapiro.test(df_2022_4$Percent.deformed_trans)
 ```
 
 ```{r}
 
-res.kruskal <- kruskal.test(Percent.deformed ~ Treatment, data = df_2022_4)
+res.kruskal <- kruskal.test(Percent.deformed ~ Larvae_pCO2, data = df_2022_4)
 res.kruskal
 
 ```
@@ -525,19 +660,19 @@ res.kruskal
 df_6 <- df %>%
   filter(Run=="6")
 
-ggplot(data=df_6, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+ggplot(data=df_6, aes(x=Larvae_pCO2, y=Percent.deformed, fill=Larvae_pCO2)) +
   geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
   theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
   #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
   labs(title="Percent Deformed, grouped by parentage (2023: F3 Larvae) ", x ="Treatment", y = "Percent Deformed")+
-  facet_wrap("Parent")
+  facet_wrap("Parent_pCO2")
 
 
 
 Run6_mean_deformaties <- df_6 %>% 
-                dplyr::select(Treatment,Parent,Percent.deformed) %>% 
+                dplyr::select(Larvae_pCO2,Parent_pCO2,Percent.deformed) %>% 
                 na.omit() %>% 
-                dplyr::group_by(Treatment,Parent) %>% 
+                dplyr::group_by(Larvae_pCO2,Parent_pCO2) %>% 
                 dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
                                  n           = n(),
                                  sd_Perc_def   = sd(Percent.deformed),
@@ -547,13 +682,13 @@ library(forcats)
 # relevel Parent so that the facets come in the approporate order - using forcats
 Run6_mean_deformaties$Parent <- forcats::fct_relevel(Run6_mean_deformaties$Parent, c("LOW", "MODERATE", "HIGH"))
 ggplot(Run6_mean_deformaties) +
-  geom_errorbar(aes(x=Treatment, 
+  geom_errorbar(aes(x=Larvae_pCO2, 
                      ymin=mean_Perc_def-se_Perc_def, 
                      ymax=mean_Perc_def+se_Perc_def), 
                  width=0, # removes the horizontal line
                  colour="black", 
                  size=1) +
-  geom_bar(aes(x=Treatment, y=mean_Perc_def,fill=factor(Treatment)), 
+  geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
             stat="identity",
            width = 0.75,
            alpha = 0.5) +
@@ -608,25 +743,25 @@ summary(aov(anova_LOW))
 
 
 ```{r}
-leveneTest(Percent.deformed_trans ~ Treatment, data=df_6)
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df_6)
 shapiro.test(df_6$Percent.deformed_trans)
 ```
 
 ```{r}
-mod <- aov(Percent.deformed_trans ~Treatment * Parent, data = df_6)
+mod <- aov(Percent.deformed_trans ~Larvae_pCO2 * Parent_pCO2, data = df_6)
 summary(mod)
 ```
 
 
 ```{r}
-scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+scheirerRayHare(Percent.deformed ~ Larvae_pCO2*Parent_pCO2,
                 data = df_6)
 
-dunnTest(Percent.deformed ~ Treatment,
+dunnTest(Percent.deformed ~ Larvae_pCO2,
                 data = df_6,
               method="bh")
 
-dunnTest(Percent.deformed ~ Parent,
+dunnTest(Percent.deformed ~ Parent_pCO2,
                 data = df_6,
               method="bh")
 ```

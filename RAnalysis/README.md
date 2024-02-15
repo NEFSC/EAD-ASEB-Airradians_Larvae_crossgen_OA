@@ -17,7 +17,6 @@ readme.md
   - (3) F2 larvae full cross 3 x 3 parent x offspring OA, *no grow out*
     - April 2022
 
-
   - (4) F2 larvae under two OA levels, *grown out to adult stage*
     * **Important!!** The F1 low pCO2 juveniles were divided to grow out a high pCO2 cohort for 1 generation!
       - August 2022

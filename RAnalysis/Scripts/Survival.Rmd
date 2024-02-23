@@ -222,7 +222,7 @@ for (i in 1:nrow(df_F1_MEANS)) {
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
                             Larvae_pCO2 = df_F1_MEANS[i,]$Larvae_pCO2,
-                            Age         = df_F1_MEANS[i,]$Age,
+                            Age         = df_F1_MEANS[i,]$Age
                           ) 
   loopDF[c(1:count_dead),3] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
@@ -231,7 +231,7 @@ for (i in 1:nrow(df_F1_MEANS)) {
   binary_df_F1_MEANS <- rbind(binary_df_F1_MEANS,loopDF) #bind to a cumulative list dataframe
   
 }
-
+binary_df_F1_MEANS$Generation <- 1
 # view the output binary format for building the surv object!
 head(binary_df_F1_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria") # view exmaple of the output data 
 
@@ -244,8 +244,9 @@ head(binary_df_F1_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "
 # (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
 # build the surv object! 
 # with tank included in the data frame (first for loop above)
-surv_F1_all  <- Surv(time = as.numeric(binary_df_F1_all$Age), 
+surv_F1_all  <-Surv(time = as.numeric(binary_df_F1_all$Age), 
                      event = as.numeric(binary_df_F1_all$Count_dead), type = "right")
+
 # plot the surv data
 ggsurvplot(survfit(surv_F1_all ~ Larvae_pCO2, binary_df_F1_all), 
            risk.table = F, pval = F , conf.int = TRUE,
@@ -291,9 +292,10 @@ head(binary_df_F1_all)
 F1_survFIT_cox <- coxme(surv_F1_all ~ Larvae_pCO2 + (1|Tank), binary_df_F1_all)
 summary(F1_survFIT_cox)
 
-#                               coef exp(coef)   se(coef)     z       p
-# Larvae_pCO2Moderate pCO2 0.1059100  1.111722 0.01277808  8.29 1.1e-16
-# Larvae_pCO2High pCO2     0.8663613  2.378241 0.01519810 57.00 0.0e+00
+#                               coef exp(coef)   se(coef)     z p
+# Larvae_pCO2Moderate pCO2 0.1969625  1.217698 0.01697219 11.61 0
+# Larvae_pCO2High pCO2     1.1161450  3.053062 0.02143035 52.08 0
+
 
 
 #The standard deviation of the tank random effect is very small (0.006017691) which suggests that tank does not really affect the outcome. Also the liklihood ratio test (Chi?sq) value is the same (312321 ), meaning that including tank as a random effect does not improve the model. We likely do not need to include it as a random effect. 
@@ -413,7 +415,7 @@ for (i in 1:nrow(df_F2_MEANS)) {
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
                             Larvae_pCO2 = df_F2_MEANS[i,]$Larvae_pCO2,
-                            Age         = df_F2_MEANS[i,]$Age,
+                            Age         = df_F2_MEANS[i,]$Age
                           ) 
   loopDF[c(1:count_dead),3] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
@@ -422,7 +424,7 @@ for (i in 1:nrow(df_F2_MEANS)) {
   binary_df_F2_MEANS <- rbind(binary_df_F2_MEANS,loopDF) #bind to a cumulative list dataframe
   
 }
-
+binary_df_F2_MEANS$Generation <- 2
 # view the output binary format for building the surv object!
 head(binary_df_F2_all) %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria") # view exmaple of the output data 
 
@@ -517,30 +519,67 @@ glht(F2_survFIT_cox, linfct = mcp(Larvae_pCO2 = "Dunnett"),alternative = "greate
 
 # filter and merge up to d14 (common between datasets)
 
+# all data
 unique(binary_df_F1_all$Age)
-binary_df_F1_d14 <- binary_df_F1_all %>% dplyr::filter(!Age == 18)
-
+binary_df_F1_d10 <- binary_df_F1_all %>% dplyr::filter(!Age %in% c(14,18)) %>% na.omit()
+unique(binary_df_F1_d10$Age) #  2  4  8 10
 unique(binary_df_F2_all$Age)
-binary_df_F2_d14 <- binary_df_F2_all %>% dplyr::filter(!Age == 21)
+binary_df_F2_d10 <- binary_df_F2_all %>% dplyr::filter(!Age %in% c(14,21)) %>% na.omit()
+unique(binary_df_F2_d10$Age) # 2  6  8 10
 
-binary_F1_F2_master   <- rbind(binary_df_F1_d14, binary_df_F2_d14)
+binary_F1_F2_master   <- rbind(binary_df_F1_d10, binary_df_F2_d10) %>% dplyr::filter(!(Generation ==1 & 
+                                                                                       Larvae_pCO2 %in% 'High pCO2'))
+unique(binary_F1_F2_master$Larvae_pCO2)
 binary_F1_F2_moderate <- binary_F1_F2_master %>% dplyr::filter(Larvae_pCO2 %in% 'Moderate pCO2')
 binary_F1_F2_low      <- binary_F1_F2_master %>% dplyr::filter(Larvae_pCO2 %in% 'Low pCO2')
+
+# by means
+unique(binary_df_F2_MEANS$Age)
+binary_df_F1_d10 <- binary_df_F1_MEANS %>% dplyr::filter(!Age %in% c(14,18)) %>% na.omit()
+unique(binary_df_F1_d10$Age) #  2  4  8 10
+unique(binary_df_F2_MEANS$Age)
+binary_df_F2_d10 <- binary_df_F2_MEANS %>% dplyr::filter(!Age %in% c(14,21)) %>% na.omit()
+unique(binary_df_F2_d10$Age) # 2  6  8 10
+
+binary_F1_F2_masterMEANS   <- rbind(binary_df_F1_d10, binary_df_F2_d10) %>% dplyr::filter(!(Generation ==1 & 
+                                                                                       Larvae_pCO2 %in% 'High pCO2'))
+binary_F1_F2_moderate <- binary_F1_F2_masterMEANS %>% dplyr::filter(Larvae_pCO2 %in% 'Moderate pCO2')
+binary_F1_F2_low      <- binary_F1_F2_masterMEANS %>% dplyr::filter(Larvae_pCO2 %in% 'Low pCO2')
+
+
 
 # (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
 # build the surv object! 
 # with tank included in the data frame (first for loop above)
+
+
+surv_F1_F2_allMEANS  <- Surv(time = as.numeric(binary_F1_F2_masterMEANS$Age), 
+                     event = as.numeric(binary_F1_F2_masterMEANS$Count_dead), type = "right")
+
+
+surv_F1_F2_all  <- Surv(time = as.numeric(binary_F1_F2_master$Age), 
+                     event = as.numeric(binary_F1_F2_master$Count_dead), type = "right")
 surv_F1_F2_mod  <- Surv(time = as.numeric(binary_F1_F2_moderate$Age), 
                      event = as.numeric(binary_F1_F2_moderate$Count_dead), type = "right")
 surv_F1_F2_low  <- Surv(time = as.numeric(binary_F1_F2_low$Age), 
                      event = as.numeric(binary_F1_F2_low$Count_dead), type = "right")
 # plot the surv data
+# all 
+ggsurvplot(survfit(surv_F1_F2_all ~ Generation+Larvae_pCO2, binary_F1_F2_masterMEANS), 
+           risk.table = F, pval = F , conf.int = TRUE,
+           palette = alpha(c("yellowgreen","orange","darkgreen","darkorange"), 
+                             c(1,0.8,1,0.8)), 
+           ggtheme = theme_survminer(),
+           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           legend.title = "Generation")
+# low
 # moderate
 ggsurvplot(survfit(surv_F1_F2_mod ~ Generation, binary_F1_F2_moderate), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("darkorange","orange"), c(1,0.8)), 
            ggtheme = theme_survminer(),
-           break.x.by = 2 ,xlab = "Age (days post fertilization)", 
+           break.x.by = 2 ,
+           xlab = "Age (days post fertilization)", 
            legend.title = "Generation")
 # low
 ggsurvplot(survfit(surv_F1_F2_low ~ Generation, binary_F1_F2_low), 
@@ -551,14 +590,29 @@ ggsurvplot(survfit(surv_F1_F2_low ~ Generation, binary_F1_F2_low),
            legend.title = "Generation")
 
 
-
+# Estimate median survival time 
+survfit(Surv(as.numeric(Generation), Larvae_pCO2) ~ 1, data = binary_F1_F2_master)
+survfit(Surv(as.numeric(Generation), Larvae_pCO2) ~ 1, data = binary_F1_F2_master) %>% 
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Median survival (95% CI)**"
+  )
 
 # statistics moderate
+binary_F1_F2_master$Generation <- factor(binary_F1_F2_master$Generation)
+str(binary_F1_F2_master) # Larvae_pCO2 now has two factors - correct!!
+F1F2_survFIT_all_cox <- coxme(surv_F1_F2_all ~ Generation + (1|Tank), binary_F1_F2_master)
+summary(F1F2_survFIT_Moderate_cox)
+
 
 # as factor for the Gneration (the ID for this model)
 binary_F1_F2_moderate$Generation <- factor(binary_F1_F2_moderate$Generation)
 str(binary_F1_F2_moderate) # Larvae_pCO2 now has two factors - correct!!
 # now run the model
+
+survdiff(Surv(time, status) ~ sex, data = lung)
+
+
 F1F2_survFIT_Moderate_cox <- coxme(surv_F1_F2_mod ~ Generation + (1|Tank), binary_F1_F2_moderate)
 summary(F1F2_survFIT_Moderate_cox)
 # Fixed coefficients

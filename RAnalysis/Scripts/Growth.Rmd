@@ -10,8 +10,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
-# knitr::opts_knit$set(root.dir = #"C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+ knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 ```
 
 
@@ -55,6 +55,8 @@ df<-read.csv("Data/larval_growth.csv", header = T) %>%
   dplyr::rename(Parent_pCO2 = Parental_OA) %>% 
   dplyr::rename(Larvae_pCO2  = treatment) # done 
 
+df <- df%>%
+  filter(Stage=="larvae")
 
 head(df)
 str(df)
@@ -113,6 +115,98 @@ df_Exp6 <- df%>%
   filter(Run=="6")
 ```
 
+#Plots for all facented by run
+```{r}
+Exp_summ <- summarySE(df, measurevar="Length", groupvars=c("Age", "Larvae_pCO2", "Run"))
+
+Exp_MeanSE <- ggplot(Exp_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_line()+
+                      geom_point()+ 
+                       geom_errorbar(aes(ymin=Length-se, ymax=Length+se), width=.2,
+                                    position=position_dodge(.1)) +
+                      scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                      theme(legend.position="right", 
+                            legend.direction="vertical", 
+                            legend.title = element_blank())+ theme_bw() + 
+                      
+                      labs(title = "Left: Exp #2 (F1)                 and         Right: Exp #4 (F2)", 
+                           x="Age (days)", 
+                           y="Shell Length (μm)") + 
+  scale_x_continuous(breaks = seq(0, 20, by = 2)) +
+  scale_y_continuous(limits=c(60,210))+
+                      theme_classic() +
+                      theme(panel.grid.major = element_blank(), 
+                            panel.grid.minor = element_blank(), 
+                            axis.title.x=element_blank(),
+                            # axis.title.y=element_blank(),
+                            panel.background = element_blank(), 
+                            axis.line = element_line(colour = "black"),
+                            legend.position="none")+
+  facet_wrap(~Run)
+
+print(Exp_MeanSE)
+```
+```{r}
+################## Checking Assumptions #############
+#Perform a Shapiro-Wilk test for normality ----- If p > 0.05 then data can be considered normal
+
+library(rstatix)
+shapiro.test(df_Exp2$spGR) 
+shapiro.test(df_Exp4$spGR) 
+
+###################Equal Variances#################
+#Levene's test -----Levene's Test for Homogeneity of Variance (center = median)
+library(car)
+leveneTest(spGR ~ Larvae_pCO2, data=df_Exp2)
+leveneTest(spGR ~ Larvae_pCO2, data=df_Exp4)
+
+
+# ANOVA: The specific growth rate data meet the assumptions of parametric stats
+mod_2 <- aov(spGR ~ Larvae_pCO2*Age, data=df_Exp2)
+summary(mod_2)
+
+mod_4 <- aov(spGR ~ Larvae_pCO2*Age, data=df_Exp4)
+summary(mod_4)
+
+#Mised effects model
+#library(lme4)
+#library(Matrix
+
+
+        
+Length_mixed = lmer(spGR ~Larvae_pCO2*Age + (1 | Rep), data = df_Exp4)
+```
+```{r}
+df_spGR <- na.omit(df)
+Exp_summ <- summarySE(df_spGR, measurevar="spGR", groupvars=c("Age", "Larvae_pCO2", "Run"))
+
+
+Exp_MeanSE <- ggplot(Exp_summ, aes(x=Age, y=spGR, color=Larvae_pCO2))+ 
+                      geom_point()+ 
+                       geom_errorbar(aes(ymin=spGR-se, ymax=spGR+se), width=.2,
+                                    position=position_dodge(.1)) +
+                      scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                      theme(legend.position="right", 
+                            legend.direction="vertical", 
+                            legend.title = element_blank())+ theme_bw() + 
+                      
+                      labs(title = "Left: Exp #2 (F1)                 and         Right: Exp #4 (F2)", 
+                           x="Age (days)", 
+                           y="Specific Growth Rate (μm/day)") + 
+  scale_x_continuous(limits=c(0, 18)) +
+  scale_y_continuous(limits=c(0, 0.12))+
+                      theme_classic() +
+                      theme(panel.grid.major = element_blank(), 
+                            panel.grid.minor = element_blank(), 
+                            axis.title.x=element_blank(),
+                            # axis.title.y=element_blank(),
+                            panel.background = element_blank(), 
+                            axis.line = element_line(colour = "black"),
+                            legend.position="none")+
+  facet_wrap(~Run)
+
+print(Exp_MeanSE)
+```
+
 
 ```{r F1  Expeirment #2}
 Exp2_summ <- summarySE(df_Exp2, measurevar="Length", groupvars=c("Age", "Larvae_pCO2"))
@@ -128,7 +222,40 @@ Exp2_MeanSE <- ggplot(Exp2_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
                       
                       labs(title = "Experiment #2 (F1)", 
                            x="Age (days)", 
-                           y="Shell Length (μm)") + #scale_y_continuous(breaks=seq(0,100,20))+ 
+                           y="Shell Length (μm)") + 
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(limits=c(60,200))+
+                      theme_classic() +
+                      theme(panel.grid.major = element_blank(), 
+                            panel.grid.minor = element_blank(), 
+                            axis.title.x=element_blank(),
+                            # axis.title.y=element_blank(),
+                            panel.background = element_blank(), 
+                            axis.line = element_line(colour = "black"),
+                            legend.position="none")
+
+print(Exp2_MeanSE)
+```
+
+
+```{r F1  Expeirment #2}
+Exp2_summ <- summarySE(df_Exp2, measurevar="spGR", groupvars=c("Age", "Larvae_pCO2"))
+
+Exp2_summ_d <- Exp2_summ %>% drop_na()
+
+Exp2_MeanSE <- ggplot(Exp2_summ_d, aes(x=Age, y=spGR, color=Larvae_pCO2))+ 
+                      geom_point()+ 
+                       geom_errorbar(aes(ymin=spGR-se, ymax=spGR+se), width=.2,
+                                    position=position_dodge(.1)) +
+                      scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+    geom_jitter()+
+                      theme(legend.position="right", 
+                            legend.direction="vertical", 
+                            legend.title = element_blank())+ theme_bw() + 
+                      
+                      labs(title = "Experiment #2 (F1)", 
+                           x="Age (days)", 
+                           y="Specific Growth Rate (μm / day)") + scale_y_continuous(breaks=seq(0,.2,0.2))+ 
                       theme_classic() +
                       theme(panel.grid.major = element_blank(), 
                             panel.grid.minor = element_blank(), 
@@ -156,7 +283,9 @@ Exp4_MeanSE <- ggplot(Exp4_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
                       
                       labs(title = "Experiment #4 (F2)", 
                            x="Age (days)", 
-                           y="Shell Length (μm)") + #scale_y_continuous(breaks=seq(0,100,20))+ 
+                           y="Shell Length (μm)") +   
+ # scale_x_continuous(breaks = seq(0, 20, by = 2)) +
+  scale_y_continuous(limits=c(60,200))+
                       theme_classic() +
                       theme(panel.grid.major = element_blank(), 
                             panel.grid.minor = element_blank(), 
@@ -165,9 +294,59 @@ Exp4_MeanSE <- ggplot(Exp4_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
                             panel.background = element_blank(), 
                             axis.line = element_line(colour = "black"),
                             legend.position="none")
+  
 
 print(Exp4_MeanSE)
 ```
+
+```{r}
+################## Checking Assumptions #############
+#Perform a Shapiro-Wilk test for normality ----- If p > 0.05 then data can be considered normal
+
+library(rstatix)
+shapiro.test(df_Exp4$Length) # not normal p = 0.00685
+
+###################Equal Variances#################
+#Levene's test -----Levene's Test for Homogeneity of Variance (center = median)
+library(car)
+
+leveneTest(Length ~ Larvae_pCO2, data=df_Exp4)
+
+#Mised effects model
+library(lme4)
+Length_mixed = lmer(Length ~Larvae_pCO2*Age + (1 | Rep), data = df_Exp4)
+```
+
+
+```{r F2 Expeirment #4}
+Exp4_summ <- summarySE(df_Exp4, measurevar="spGR", groupvars=c("Age", "Larvae_pCO2"))
+
+Exp4_MeanSE <- ggplot(Exp4_summ, aes(x=Age, y=spGR, color=Larvae_pCO2))+ 
+                      geom_point()+ 
+                       geom_errorbar(aes(ymin=spGR-se, ymax=spGR+se), width=.2,
+                                    position=position_dodge(.1)) +
+                      scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                      theme(legend.position="right", 
+                            legend.direction="vertical", 
+                            legend.title = element_blank())+ theme_bw() + 
+                      
+                      labs(title = "Experiment #4 (F2)", 
+                           x="Age (days)", 
+                           y="SPecofic Growth Rate (μm/day)")+ 
+                      theme_classic() +
+                      theme(panel.grid.major = element_blank(), 
+                            panel.grid.minor = element_blank(), 
+                            axis.title.x=element_blank(),
+                            axis.title.y=element_blank(),
+                            panel.background = element_blank(), 
+                            axis.line = element_line(colour = "black"),
+                            legend.position="none")
+  
+
+print(Exp4_MeanSE)
+```
+
+
 
 ```{r F3 Expeirment #6}
 Exp6_summ <- summarySE(df_Exp6, measurevar="Length", groupvars=c("Age", "Larvae_pCO2", "Parent_pCO2"))
@@ -177,6 +356,7 @@ Exp6_MeanSE <- ggplot(Exp6_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
                        geom_errorbar(aes(ymin=Length-se, ymax=Length+se), width=.2,
                                     position=position_dodge(.1)) +
                       scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+  
                       theme(legend.position="right", 
                             legend.direction="vertical", 
                             legend.title = element_blank())+ theme_bw() + 
@@ -195,8 +375,6 @@ Exp6_MeanSE <- ggplot(Exp6_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
 
 print(Exp6_MeanSE)
 ```
-
-
 
 
 ```{r arrange plots}

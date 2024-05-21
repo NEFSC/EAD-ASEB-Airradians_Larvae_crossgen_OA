@@ -442,13 +442,26 @@ binary_df_F2_MEANS <- binary_df_F2_MEANS %>%
 * NOTE: omit the 'high' treamtent in F1 as tihs was not present in F2 larvae
 ```{r merge datasets}
 # all - with tank replicate included
-binary_df_F1_F2_all <- rbind(binary_df_F1_all, binary_df_F2_all) %>% dplyr::filter(!(Larvae_pCO2 == 'High pCO2'))
+binary_df_F1_F2_all             <- rbind(binary_df_F1_all, binary_df_F2_all) %>% 
+                                         dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
+                                         dplyr::mutate(Prop_time_metamophosis = 
+                                                            case_when(Generation == 1 ~ (Age / 10),
+                                                                      Generation == 2 ~ (Age / 14))) %>% 
+                                         # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
+                                         dplyr::filter(!Prop_time_metamophosis >1) 
 binary_df_F1_F2_all$Larvae_pCO2 <- factor(binary_df_F1_F2_all$Larvae_pCO2, exclude = 'High pCO2')
-unique(binary_df_F1_F2_all$Larvae_pCO2)
+
 #  by mean tank
-binary_df_F1_F2_MEANS <- rbind(binary_df_F1_MEANS, binary_df_F2_MEANS) %>% dplyr::filter(!(Larvae_pCO2 == 'High pCO2'))
+binary_df_F1_F2_MEANS             <- rbind(binary_df_F1_MEANS, binary_df_F2_MEANS) %>% 
+                                           dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
+                                           dplyr::mutate(Prop_time_metamophosis = 
+                                                            case_when(Generation == 1 ~ (Age / 10),
+                                                                      Generation == 2 ~ (Age / 14))) %>% 
+                                         # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
+                                         dplyr::filter(!Prop_time_metamophosis >1) 
 binary_df_F1_F2_MEANS$Larvae_pCO2 <- factor(binary_df_F1_F2_MEANS$Larvae_pCO2, exclude = 'High pCO2')
-unique(binary_df_F1_F2_MEANS$Larvae_pCO2)
+
+
 ```
 ## Truncate binary master files by the larval period! 
 
@@ -457,22 +470,25 @@ larval survival comapred across gnerations should only show < 10 dpf survival
 
 ```{r IMPORTNAT truncate <10DPF}
 # all
-df_F1_all_larvae    <- binary_df_F1_all %>% filter(Age <=10) # F1 
-df_F2_all_larvae    <- binary_df_F2_all %>% filter(Age <=10) # F2
-df_F1_F2_all_larvae <- binary_df_F1_F2_all  %>% filter(Age <=10) # merged
+df_F1_all_larvae    <- binary_df_F1_all %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+df_F2_all_larvae    <- binary_df_F2_all %>% filter(Age <=10) # F2- aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+df_F1_F2_all_larvae <- binary_df_F1_F2_all  %>% filter(!Prop_time_metamophosis >1) # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
+df_F1_F2_all_larvaeLOW <- df_F1_F2_all_larvae %>% filter(Larvae_pCO2 %in% "Low pCO2")
+df_F1_F2_all_larvaeMOD <- df_F1_F2_all_larvae %>% filter(Larvae_pCO2 %in% "Moderate pCO2")
 # mean data by tank replicate within treatment
-df_F1_MEANS_larvae    <- binary_df_F1_MEANS %>% filter(Age <=10) # F1 
-df_F2_MEANS_larvae    <- binary_df_F2_MEANS %>% filter(Age <=10) # F2
-df_F1_F2_MEANS_larvae <- binary_df_F1_F2_MEANS  %>% filter(Age <=10) # merged
-
+df_F1_MEANS_larvae    <- binary_df_F1_MEANS %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons 
+df_F2_MEANS_larvae    <- binary_df_F2_MEANS %>% filter(Age <=10) # F2- aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+df_F1_F2_MEANS_larvae <- binary_df_F1_F2_MEANS  %>% filter(!Prop_time_metamophosis >1) # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
+df_F1_F2_MEANS_larvaeLOW <- df_F1_F2_MEANS_larvae %>% filter(Larvae_pCO2 %in% "Low pCO2") # comparisons to ACTUAL developmental timing as proportion time
+df_F1_F2_MEANS_larvaeMOD <- df_F1_F2_MEANS_larvae %>% filter(Larvae_pCO2 %in% "Moderate pCO2") # comparisons to ACTUAL developmental timing as proportion time
 # what days are included?
 unique(df_F1_all_larvae$Age) # 2  4  8 10
 unique(df_F2_all_larvae$Age) # 2  6  8 10
-unique(df_F1_F2_all_larvae$Age) #  2  4  8 10  6
+unique(df_F1_F2_all_larvae$Age) #  2  4  8 10  6 14
 
 unique(df_F1_MEANS_larvae$Age) # 2  4  8 10
 unique(df_F2_MEANS_larvae$Age) # 2  6  8 10
-unique(df_F1_F2_MEANS_larvae$Age) #  2  4  8 10  6
+unique(df_F1_F2_MEANS_larvae$Age) #  2  4  8 10  6 14
 ```
 
 ## Surv object with all data v. mean data
@@ -483,14 +499,38 @@ unique(df_F1_F2_MEANS_larvae$Age) #  2  4  8 10  6
   
 ```{r F1 & F2 create surv object}
 
-s1 <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
+s1_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_df_F1_MEANS)
 
-s2 <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
 
-s1_2 <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
+# convert Age to the proportion of time to metamorphosis 
+df_F1_MEANS_larvae$Prop_time_metamophosis <- (df_F1_MEANS_larvae$Age / 10)
+df_F2_MEANS_larvae$Prop_time_metamophosis <- (df_F2_MEANS_larvae$Age / 14)
+
+
+
+s1          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
+s1_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
+
+
+s2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
+s2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
+
+
+s1_2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
+s1_2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
+
+
+
+
+s1_2LOW          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeLOW)
+s1_2proptimeLOW  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeLOW)
+
+s1_2MOD          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeMOD)
+s1_2proptimeMOD  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeMOD)
 ```
-
-```{r F1 & F2 plot}
+# Kaplan Meier plots 
+* F1 - all treatments and as age & proportion time to metamorphosis
+```{r F1 plot}
 
 F1_larvaeKaplanMeier <- s1 %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
@@ -506,6 +546,22 @@ F1_larvaeKaplanMeier <- s1 %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
                        # add_pvalue(location  = "annotation", x = 8.5)
 
+F1_larvaeKaplanMeier <- s1_proptime %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        add_risktable() +
+                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+```
+* F2 - all treatments and as age &  proportion time to metamorphosis
+```{r F2 plot}
 
 F2_larvaeKaplanMeier <- s2 %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
@@ -522,22 +578,83 @@ F2_larvaeKaplanMeier <- s2 %>%
                        # add_pvalue(location  = "annotation", x = 8.5)
 
 
-F1_F2_larvaeKaplanMeier <- s1_2 %>% 
+F2_larvaeKaplanMeier <- s2_proptime %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange")) +
+                        scale_fill_manual(values = c("forestgreen","orange")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        add_risktable() +
+                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+```
+
+
+* F1 & F2 - low vs, mod and ONLY as proportion time to metamorphosis
+```{r F1 & F2 plot low v. mod treatments as prop time to metamorphosis }
+
+F1_F2_larvaeKaplanMeier <- s1_2_proptime %>% 
                         ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
                         scale_color_manual(values = c("green","forestgreen",
                                                       "orange","darkorange4")) +
                         scale_fill_manual(values = c("green","forestgreen",
                                                      "orange","darkorange4")) +
                         labs(
-                          x = "Days",
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
+                     #   add_pvalue(location  = "annotation", x = 8.5)
+
+
+# output plot 
+pdf(paste0("Output/Survival/F1_F2_Mod_Low_Survival_ggsurvfit.pdf"),width=8, height=4)
+print(F1_F2_larvaeKaplanMeier)
+dev.off()
+```
+
+* F1 & F2 - Explore generation effect within treatment - low ONLY as proportion time to metamorphosis
+```{r F1 & F2 plot low ONLY as prop time to metamorphosis }
+
+F1_F2_larvaeKaplanMeierLOW <- s1_2proptimeLOW %>% 
+                        ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
+                        scale_color_manual(values = c("green","forestgreen")) +
+                        scale_fill_manual(values = c("green","forestgreen")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
                         add_risktable() +
                         add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
 ```
+* F1 & F2 - Explore generation effect within treatment - moderate ONLY as proportion time to metamorphosis
+```{r F1 & F2 plot moderate ONLY as prop time to metamorphosis }
+
+F1_F2_larvaeKaplanMeierMOD <- s1_2proptimeMOD %>% 
+                        ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
+                        scale_color_manual(values = c("orange","darkorange")) +
+                        scale_fill_manual(values = c("orange","darkorange")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        add_risktable() +
+                        add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
+                     #   add_pvalue(location  = "annotation", x = 8.5)
+```
+
 
 ## Estimating x-time survival
 * per 10 days post fertilization?
@@ -564,6 +681,42 @@ F1_F2_10d_surv_prob <- s1_2 %>%
 
 ```
 
+## Estimating x-time survival
+* per 8 days from day 2 to 18 post fertilization
+```{r}
+
+F1_surv_prob <- s1_all %>% 
+                          tbl_survfit(
+                            times = 18,
+                            label_header = "**survival to 20 days post-fertilization (95% CI)**")
+F1_surv_prob$table_body$stat_1[2]
+F1_surv_prob$table_body$stat_1[3]
+
+
+# for loop every 50 days between 100 - 450 days post fertilization to a summary table!
+x <- seq.int(2,18, by = 8) # call the integer
+summarytable <- data.frame() # summary table 
+for (i in 1:length(x)) { # for loop
+  survtable <- s1_all %>% tbl_survfit(times = x[i])
+  survtable$table_body$stat_1[2]
+  survtable$table_body$stat_1[3]
+  loopDF  <- data.frame(matrix(0,ncol = 4, nrow = 1)) 
+  colnames(loopDF) = c('Age','LowpCO2_Probabilty','ModpCO2_Probabilty','Diff')
+  loopDF  <- loopDF %>% 
+        dplyr::mutate(
+                      Age                = x[i],
+                      LowpCO2_Probabilty = survtable$table_body$stat_1[2], 
+                      ModpCO2_Probabilty = survtable$table_body$stat_1[3],
+                      Diff               = abs(
+                                           as.numeric(substr(survtable$table_body$stat_1[2],1,2)) -
+                                           as.numeric(substr(survtable$table_body$stat_1[3],1,2)) 
+                                           )
+                      ) 
+  loopDF       <- data.frame(loopDF) # name dataframe for this single row
+  summarytable <- rbind(summarytable,loopDF) #bind to a cumulative list dataframe
+}
+```
+
 # Comparing survival times between groups (log-rank test)
 * We can conduct between-group significance tests using a log-rank test. The log-rank test equally weights observations over the entire follow-up time and is the most common way to compare survival times between groups. There are versions that more heavily weight the early or late follow-up that could be more appropriate depending on the research question (see ?survdiff for different test options).
 
@@ -572,9 +725,9 @@ F1_F2_10d_surv_prob <- s1_2 %>%
 
 F1_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
 #                              N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2      1340     1154     1214       3.0      9.98
-# Larvae_pCO2=Moderate pCO2 1127      989     1111      13.4     43.15
-# Larvae_pCO2=High pCO2      805      762      579      57.5    126.89
+# Larvae_pCO2=Low pCO2      1340     1154     1216      3.14      10.6
+# Larvae_pCO2=Moderate pCO2 1084      946     1066     13.46      42.5
+# Larvae_pCO2=High pCO2      805      762      580     56.82     126.1
 
 F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
 #                             N Observed Expected (O-E)^2/E (O-E)^2/V
@@ -583,10 +736,10 @@ F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data 
 
 F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
 #                                            N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2, Generation=1      1340     1154     1068  6.87e+00  2.07e+01
-# Larvae_pCO2=Low pCO2, Generation=2       280      199      222  2.44e+00  4.67e+00
-# Larvae_pCO2=Moderate pCO2, Generation=1 1127      989      988  2.61e-04  7.55e-04
-# Larvae_pCO2=Moderate pCO2, Generation=2  403      268      331  1.20e+01  2.43e+01
+# Larvae_pCO2=Low pCO2, Generation=1      1340     1154      977      32.2      84.2
+# Larvae_pCO2=Low pCO2, Generation=2       334      250      343      25.2      54.7
+# Larvae_pCO2=Moderate pCO2, Generation=1 1084      946      861       8.3      20.3
+# Larvae_pCO2=Moderate pCO2, Generation=2  481      335      504      56.7     131.7
 ```
 
 
@@ -596,30 +749,116 @@ F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Gen
 
 * The Cox regression model is a semi-parametric model that can be used to fit univariable and multivariable regression models that have survival outcomes.
 
-```{r cox  for multiple variables}
+```{r cox for multiple variables - random tank effect with all data}
+library(survminer) # ggforect hazard ratio plot
 
-F1_coxph_test        <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae)
-F1_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae) %>% 
-                              tbl_regression(exp = TRUE) 
+# F1 all treatments
+F1_coxph_test       <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae)
+F1_hazardratio_plot <- ggforest(F1_coxph_test, data = df_F1_all_larvae)
+F1_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae) %>%  tbl_regression(exp = TRUE) 
 #                              coef exp(coef) se(coef)      z        p
 # Larvae_pCO2Moderate pCO2 -0.08286   0.92048  0.01939 -4.272 1.93e-05
 # Larvae_pCO2High pCO2      0.46824   1.59718  0.02121 22.080  < 2e-16
 # 1 | TankTRUE                   NA        NA  0.00000     NA       NA
 
 F2_coxph_test <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F2_all_larvae)
+F2_hazardratio_plot <- ggforest(F2_coxph_test, data = df_F2_all_larvae)
 F2_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_all_larvae) %>% 
                               tbl_regression(exp = TRUE) 
 #                              coef exp(coef) se(coef)      z       p
 # Larvae_pCO2Moderate pCO2 -0.15145   0.85946  0.05402 -2.803 0.00506
 
-F1_F2_coxph_test <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2*Generation+(1|Tank), data = df_F1_F2_all_larvae)
-F1_F2_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2*Generation+(1|Tank), data = df_F1_F2_all_larvae) %>% 
-                              tbl_regression(exp = TRUE) 
+df_F1_F2_all_larvae$Generation <- as.character(df_F1_F2_all_larvae$Generation)
+F1_F2_coxph_test <- coxph(formula = Surv(Pro, Count_dead) ~ Larvae_pCO2+Generation+(1|Tank), data = df_F1_F2_all_larvae)
+F1_F2_hazardratio_plot <- ggforest(F1_F2_coxph_test, data = df_F1_F2_all_larvae)
+F1_F2_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2*Generation+(1|Tank), data = df_F1_F2_all_larvae) %>% tbl_regression(exp = TRUE) 
 #                                         coef exp(coef) se(coef)      z        p
 # Larvae_pCO2Moderate pCO2            -0.01726   0.98289  0.06645 -0.260    0.795
 # Generation                          -0.25022   0.77863  0.04297 -5.823 5.79e-09
 # 1 | TankTRUE                              NA        NA  0.00000     NA       NA
 # Larvae_pCO2Moderate pCO2:Generation -0.06632   0.93584  0.05733 -1.157    0.247
+
+
+
+# Low gen 1 vs Low Gen 2
+df_F1_F2_all_larvaeLOW$Generation <- as.character(df_F1_F2_all_larvaeLOW$Generation)
+F1_F2_coxph_testLOW <- coxph(formula = Surv(Age, Count_dead) ~ Generation, 
+                            data = df_F1_F2_all_larvaeLOW)
+F1_F2_hazardratio_plotLOW <- ggforest(F1_F2_coxph_testLOW, data = df_F1_F2_all_larvaeLOW)
+
+
+# Mod gen 1 vs Low Gen 2
+df_F1_F2_all_larvaeMOD$Generation <- as.character(df_F1_F2_all_larvaeMOD$Generation)
+F1_F2_coxph_testMOD <- coxph(formula = Surv(Age, Count_dead) ~ Generation, 
+                            data = df_F1_F2_all_larvaeMOD)
+F1_F2_hazardratio_plotMOD <- ggforest(F1_F2_coxph_testMOD, data = df_F1_F2_all_larvaeMOD)
+
+
+```
+
+
+```{r cox  for multiple variables - mean data}
+library(survminer) # ggforect hazard ratio plot
+
+
+# F1 - low mod and high  AGE
+F1_coxph_testMEAN        <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
+                                  data = df_F1_MEANS_larvae)
+F1_hazardratio_plotMEAN <- ggforest(F1_coxph_testMEAN, data = df_F1_MEANS_larvae)
+F1_coxph_test_tableMEAN <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2,
+                                 data = df_F1_MEANS_larvae) %>%  tbl_regression(exp = TRUE) 
+#                              coef exp(coef) se(coef)      z      p
+# Larvae_pCO2Moderate pCO2 -0.08374   0.91967  0.04337 -1.931 0.0535
+# Larvae_pCO2High pCO2      0.46589   1.59343  0.04740  9.830 <2e-16
+
+
+
+
+
+
+
+# F2 - low mod and high  AGE
+df_F2_MEANS_larvae$Larvae_pCO2 <- droplevels(df_F2_MEANS_larvae$Larvae_pCO2) 
+levels(df_F2_MEANS_larvae$Larvae_pCO2) <- c('Low pCO2', 'Moderate pCO2')
+F2_coxph_testMEANS       <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
+                                  data = df_F2_MEANS_larvae)
+F2_hazardratio_plotMEANS <- ggforest(F2_coxph_testMEANS, data = df_F2_MEANS_larvae)
+F2_coxph_test_tableMEANS <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, 
+                                  data = df_F1_MEANS_larvae) %>% tbl_regression(exp = TRUE) 
+#                              coef exp(coef) se(coef)      z     p
+# Larvae_pCO2Moderate pCO2 -0.14927   0.86133  0.09371 -1.593 0.111
+
+
+
+
+
+
+# F1 and F2 - as AGE
+df_F1_F2_MEANS_larvae$Generation <- as.character(df_F1_F2_MEANS_larvae$Generation) # make generation a character not a integer
+df_F1_F2_MEANS_larvae$Gen_pCO2   <- paste0(df_F1_F2_MEANS_larvae$Generation, df_F1_F2_MEANS_larvae$Larvae_pCO2) # new column for hazard ratio
+F1_F2_coxph_testBOTH       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
+                                    data = df_F1_F2_MEANS_larvae)
+F1_F2_hazardratio_plotBOTH <- ggforest(F1_F2_coxph_testBOTH, data = df_F1_F2_MEANS_larvae)
+
+
+pdf("Output/Survival/F1_F2_Mod_Low_Survival_hazardratio.pdf",width=6, height=2)
+print(F1_F2_hazardratio_plotBOTH)
+dev.off()
+
+# F1 and F2 WITHIN TREATMENT AND AS PROPORTION TIME TO METAMORPHOSIS
+# Low gen 1 vs Low Gen 2
+df_F1_F2_MEANS_larvaeLOW$Generation <- as.character(df_F1_F2_MEANS_larvaeLOW$Generation)
+F1_F2_coxph_testLOW <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                            data = df_F1_F2_MEANS_larvaeLOW)
+F1_F2_hazardratio_plotLOW <- ggforest(F1_F2_coxph_testLOW, data = df_F1_F2_MEANS_larvaeLOW)
+
+
+# Mod gen 1 vs Low Gen 2
+df_F1_F2_MEANS_larvaeMOD$Generation <- as.character(df_F1_F2_MEANS_larvaeMOD$Generation)
+F1_F2_coxph_testMOD <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                            data = df_F1_F2_MEANS_larvaeMOD)
+F1_F2_hazardratio_plotMOD <- ggforest(F1_F2_coxph_testMOD, data = df_F1_F2_MEANS_larvaeMOD)
+
 ```
 
 ```{r}

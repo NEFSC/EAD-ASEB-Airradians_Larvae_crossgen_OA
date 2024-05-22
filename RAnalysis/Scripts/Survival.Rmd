@@ -7,8 +7,7 @@ output:
   html_document: default
 ---
 
-# 20231217 - started manuscript Github repostiory 'EAD-ASEB-Airradians_Larvae_crossgen_OA'
-# SGurr edits
+### SET UP
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
@@ -16,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 ```
 
-
+### LOAD PACKAGES
 ```{r, echo=FALSE}
 library(ggplot2)
 library(tidyr)
@@ -36,7 +35,7 @@ library(ggsurvfit) # survfit2
 library(gtsummary) # tbl_survfit
 ```
 
-# Load data 
+### LAOD DATA
 ```{r, echo=FALSE}
 df <- read.csv("Data/larval_survival.csv", header = T) %>% 
   dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival)) %>% 
@@ -68,9 +67,17 @@ df$Percent_Survival_trans <- asin(sqrt(df$Percent_Survival))
 # str(df)
 ```
 
-## About data 
+# About data 
 
-* output tables for each generation where 'n' is the number of tanks!
+### Experiments: 
+
+  - (2) F1 larvae under three OA levels, *grown out to adult stage*
+
+  - (4) F2 larvae under two OA levels, *grown out to adult stage*
+
+  - (6) F3 larvae under 3 x 3 parent x offsring OA, *no grow out past juvenile takedown of the experiment*
+
+### * NOTE: N = 3 for Runs 3 and 6 for parental x offspring pCO2 treamtents 
 
 ```{r about data}
 
@@ -96,31 +103,36 @@ Rep_Summary_G3 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria
 ```
 
 
-### Build data frames for each generation
+### Build data frames for each expeirment 
+
+
 ```{r}
-df_F1 <- df%>%
-  filter(Generation=="1")
+df_Exp2 <- df%>%
+  filter(Generation=="1") %>% dplyr::mutate(Experiment = 2)
 
-df_F2 <- df%>%
-  filter(Generation=="2")
+df_Exp4 <- df%>%
+  filter(Generation=="2") %>% dplyr::mutate(Experiment = 4)
 
-df_F3 <- df%>%
-  filter(Generation=="3")
+df_Exp6 <- df%>%
+  filter(Generation=="3") %>% dplyr::mutate(Experiment = 6)
 ```
 
-# F1 & F2 Larval Survival
+
+# Plot data as barplots mean +- SE for each run
+
+## Manuscript 1; Expeirments 2 and 4
+
+**output folder** = '1_Survival_Growth'
 
 * note that metamorphosis was observed at 10 dpf in F1s and 14 dpf in F2s, therfore 
 larval survival comapred across gnerations should only show < 10 dpf survival 
+ 
+```{r Mean table + plots; F1 Experiment #2}
 
-## F1s: Plot all raw count live data  
-```{r F1 summary and plot ALL}
+stL_Exp2 <- summarySE(df_Exp2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
+stL_Exp2 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
-stL_F1 <- summarySE(df_F1, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL_F1 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
-
-
-F1_PlotMeanSE <-  ggplot(stL_F1, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
+Exp2_PlotMeanSE <-  ggplot(stL_Exp2, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
                           geom_point()+ 
                            geom_errorbar(aes(ymin=Percent_Survival-se, 
                                              ymax=Percent_Survival+se), width=.2,
@@ -134,23 +146,9 @@ F1_PlotMeanSE <-  ggplot(stL_F1, aes(x=Age, y=Percent_Survival, color=Larvae_pCO
                                 panel.grid.minor = element_blank(), 
                                 panel.background = element_blank(), 
                                 axis.line = element_line(colour = "black"))
- 
-F1_PlotMeanSE
+Exp2_PlotMeanSE
 
-pdf("Output/Survival/F1_survival_all_meanSE.pdf", width=10, height=5)
-print(F1_PlotMeanSE)
-dev.off()
-
-```
-
-## F1s: Plot  raw count live data before 10 dpf 
-```{r F1 summary and plot JUST LARVAE}
-
-stL_F1 <- summarySE(df_F1, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL_F1 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
-
-
-F1_larvae_PlotMeanSE <-  stL_F1 %>%  dplyr::filter(Age <= 10) %>% 
+Exp2_larvae_PlotMeanSE <-  stL_Exp2 %>%  dplyr::filter(Age <= 10) %>% 
                                 ggplot(aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
                                         geom_point()+ 
                                          geom_errorbar(aes(ymin=Percent_Survival-se, 
@@ -166,51 +164,43 @@ F1_larvae_PlotMeanSE <-  stL_F1 %>%  dplyr::filter(Age <= 10) %>%
                                               panel.background = element_blank(), 
                                               axis.line = element_line(colour = "black"))
  
-F1_PlotMeanSE
+Exp2_larvae_PlotMeanSE
 
-pdf("Output/Survival/F1_survival_larvae_meanSE.pdf", width=10, height=5)
-print(F1_larvae_PlotMeanSE)
+# output the data !!
+
+write.csv(stL_Exp2,"Output/1_Survival_Growth/Experiment1_Mean_Survival.csv")
+
+pdf("Output/1_Survival_Growth/Experiment1_F1larvae_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp2_larvae_PlotMeanSE)
 dev.off()
 
-```
-
-## F2s: Plot all raw count live data  
-```{r F2 summary and plot ALL}
-
-stL_F2 <- summarySE(df_F2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL_F2 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
-
-F2_PlotMeanSE <- ggplot(stL_F2, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2))+ geom_line()+
-                            geom_point()+ 
-                             geom_errorbar(aes(ymin=Percent_Survival-se, ymax=Percent_Survival+se), width=.2,
-                                          position=position_dodge(.1)) +
-                            scale_color_manual(values=c("green4", "darkorange1", "purple"))+
-                            theme(legend.position="right", 
-                                  legend.direction="vertical", 
-                                  legend.title = element_blank())+ theme_bw() + 
-                            labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
-                            ggtitle("F2 larvae survival (Mean +- SE)") + 
-                            theme(panel.grid.major = element_blank(), 
-                                  panel.grid.minor = element_blank(), 
-                                  panel.background = element_blank(), 
-                                  axis.line = element_line(colour = "black"))
- 
-F2_PlotMeanSE
-
-pdf("Output/Survival/F2_survival__all_meanSE.pdf", width=10, height=5)
-print(F2_PlotMeanSE)
+pdf("Output/1_Survival_Growth/Experiment1_F1_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp2_PlotMeanSE)
 dev.off()
-
 ```
 
-## F2s: Plot  raw count live data before 10 dpf 
-```{r F2 summary and plot JUST LARVAE}
+```{r Mean table + plots; F2 Experiment #4}
 
-stL_F2 <- summarySE(df_F2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
-stL_F2 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+stL_Exp4 <- summarySE(df_Exp4, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
+stL_Exp4 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
+Exp4_PlotMeanSE <-  ggplot(stL_Exp4, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
+                          geom_point()+ 
+                           geom_errorbar(aes(ymin=Percent_Survival-se, 
+                                             ymax=Percent_Survival+se), width=.2,
+                                        position=position_dodge(.1)) +
+                          scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                          theme(legend.position="right", legend.direction="vertical", 
+                                legend.title = element_blank())+ theme_bw() + 
+                          labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                          ggtitle("F2 larvae + post-metamorphosis survival (Mean +- SE)") + 
+                          theme(panel.grid.major = element_blank(), 
+                                panel.grid.minor = element_blank(), 
+                                panel.background = element_blank(), 
+                                axis.line = element_line(colour = "black"))
+Exp4_PlotMeanSE
 
-F2_larvae_PlotMeanSE <-  stL_F2 %>%  dplyr::filter(Age <= 10) %>% 
+Exp4_larvae_PlotMeanSE <-  stL_Exp4 %>%  dplyr::filter(Age <= 14) %>% 
                                 ggplot(aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
                                         geom_point()+ 
                                          geom_errorbar(aes(ymin=Percent_Survival-se, 
@@ -226,15 +216,81 @@ F2_larvae_PlotMeanSE <-  stL_F2 %>%  dplyr::filter(Age <= 10) %>%
                                               panel.background = element_blank(), 
                                               axis.line = element_line(colour = "black"))
  
-F2_larvae_PlotMeanSE
+Exp4_larvae_PlotMeanSE
 
-pdf("Output/Survival/F2_survival_larvae_meanSE.pdf", width=10, height=5)
-print(F2_larvae_PlotMeanSE)
+# output the data !!
+
+write.csv(stL_Exp4,"Output/1_Survival_Growth/Experiment4_Mean_Survival.csv")
+
+pdf("Output/1_Survival_Growth/Experiment4_F2larvae_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp4_larvae_PlotMeanSE)
 dev.off()
 
+pdf("Output/1_Survival_Growth/Experiment4_F2_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp4_PlotMeanSE)
+dev.off()
+```
+
+## Manuscript 4; Expeirments 6
+
+**output folder** = '4_F3_Full_factorial'
+
+```{r Mean table + plots; F3 Experiment #6}
+
+stL_Exp6 <- summarySE(df_Exp6, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
+stL_Exp6 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+Exp6_PlotMeanSE <-  ggplot(stL_Exp6, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
+                          geom_point()+ 
+                           geom_errorbar(aes(ymin=Percent_Survival-se, 
+                                             ymax=Percent_Survival+se), width=.2,
+                                        position=position_dodge(.1)) +
+                          scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                          theme(legend.position="right", legend.direction="vertical", 
+                                legend.title = element_blank())+ theme_bw() + 
+                          labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                          ggtitle("F3 larvae + post-metamorphosis survival (Mean +- SE)") + 
+                          theme(panel.grid.major = element_blank(), 
+                                panel.grid.minor = element_blank(), 
+                                panel.background = element_blank(), 
+                                axis.line = element_line(colour = "black"))
+Exp6_PlotMeanSE
+
+Exp6_larvae_PlotMeanSE <-  stL_Exp6 %>%  dplyr::filter(Age <= 14) %>% 
+                                ggplot(aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
+                                        geom_point()+ 
+                                         geom_errorbar(aes(ymin=Percent_Survival-se, 
+                                                           ymax=Percent_Survival+se), width=.2,
+                                                      position=position_dodge(.1)) +
+                                        scale_color_manual(values=c("green4", "darkorange1", "purple"))+
+                                        theme(legend.position="right", legend.direction="vertical", 
+                                              legend.title = element_blank())+ theme_bw() + 
+                                        labs(x="Age (days)", y="Percent Survival")+ #scale_y_continuous(breaks=seq(0,100,20))+ 
+                                        ggtitle("F3 larvae survival (Mean +- SE)") + 
+                                        theme(panel.grid.major = element_blank(), 
+                                              panel.grid.minor = element_blank(), 
+                                              panel.background = element_blank(), 
+                                              axis.line = element_line(colour = "black"))
+ 
+Exp6_larvae_PlotMeanSE
+
+# output the data !!
+
+write.csv(stL_Exp6,"Output/4_F3_Full_factorial/Experiment6_Mean_Survival.csv")
+
+pdf("Output/4_F3_Full_factorial/Experiment6_F2larvae_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp6_larvae_PlotMeanSE)
+dev.off()
+
+pdf("Output/4_F3_Full_factorial/Experiment6_F2_Survival_MeanSE.pdf", width=10, height=5)
+print(Exp6_PlotMeanSE)
+dev.off()
 ```
 
 # Kaplan-Meier plots
+
+
+## About:
 
 * We will use the {ggsurvfit} package to generate Kaplan-Meier plots. This package aims to ease plotting of time-to-event endpoints using the power of the {ggplot2} package. See http://www.danieldsjoberg.com/ggsurvfit/index.html for details.
 
@@ -242,7 +298,7 @@ dev.off()
 
 * useful links [https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html#Comparing_survival_times_between_groups]
 
-* What the hell dpes a surv object mean?? 
+* What the hell does a surv object mean?? 
   
   - a 'surv' object reads ALL events as that of a dead (1) or alive (0) individual
   
@@ -250,9 +306,41 @@ dev.off()
   
     - Nope! Below we use logic to create a GIGANTIC table formatted correctly for this purpose!
 
-```{r F1 & F2 edit}
+## Format
+
+ * Build new column for count dead - take the count alive data from time 0 and porp survival to calcualted number dead
+
+## Convert to binary formant (super long data tbale!) using two for loops:
+
+ * (1) Including tank - to use as surv object in coxme statistics (random factor included!) not suitable for plotting
+ 
+ * (2) Mean counts alive and dead by tank - better represented for plots!
+
+
+
+
+
+
+## Manuscript 1; Expeirments 2 and 4
+
+**output folder** = '1_Survival_Growth'
+
+**note**: out ultimate objsetice with the sruvival data in this manuscript is to investigate change insurvivroship in reponse to treamtent across treatment 
+and generational timescales - we reached metamorphosis at 10 DPF for the Experiment 2 and at 14 DPF or experiment 4, so we will need 
+to cater to this difference to make meaningful comparisons
+
+
+
+
+
+### Experiment 2 F1s
+
+
+
+
+```{r format F1 Experiment #2}
 # create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
-df_F1 <- df_F1 %>% 
+df_Exp2 <- df_Exp2 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
           dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
@@ -260,344 +348,503 @@ df_F1 <- df_F1 %>%
                                                proportion >0 ~
                                                  (1/as.numeric(proportion))*
                                                  as.numeric(Count_alive))) # proportion is that of alive
+```
 
-df_F2 <- df_F2 %>% 
+```{r convert to binary F1 Experiment #2}
+
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not suitable for plotting
+
+# Call the cumulative dataframe that we will write to in the for loop below
+binary_Exp2_all     <- data.frame() # start dataframe  - all
+# run it 
+for (i in 1:nrow(df_Exp2)) {
+   count_alive <- round(df_Exp2[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp2[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   #count_alive <- round(df_Exp2[i,]$Count_alive) # raw counts
+   #count_dead  <- round(df_Exp2[i,]$Count_dead)  # raw counts
+   
+   loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Parent_pCO2 = df_Exp2[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_Exp2[i,]$Larvae_pCO2,
+                            Generation  = df_Exp2[i,]$Generation,
+                            Tank        = df_Exp2[i,]$Tank,  
+                            Age         = df_Exp2[i,]$Age,
+                          ) 
+  loopDF[c(1:count_dead),6] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
+
+  loopDF           <- data.frame(loopDF) # name dataframe for this single row
+  binary_Exp2_all <- rbind(binary_Exp2_all,loopDF) #bind to a cumulative list dataframe
+}
+# To address tank as a random factor it MUST be numeric, change this here
+unique(binary_Exp2_all$Tank) # "A" "B" "C" "D" "E" NA
+binary_Exp2_all <- binary_Exp2_all %>% 
+                    dplyr::mutate(Generation = 1,
+                                  Tank = case_when(Tank== 'A'~1,
+                                                   Tank== 'B'~2,
+                                                   Tank== 'C'~3,
+                                                   Tank== 'D'~4,
+                                                   Tank== 'E'~5)) %>% 
+                    na.omit()
+
+
+# (2) Mean counts alive and dead by tank - better representated for plots!
+# difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
+df_Exp2_MEANS <- df_Exp2 %>% 
+              dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
+              dplyr::group_by(Larvae_pCO2, Age) %>% 
+              dplyr::summarise(mean_Count_alive = mean(Count_alive), 
+                               mean_Count_dead = mean(Count_dead))
+
+# call datafarme binary for plotting
+binary_Exp2_MEANS       <- data.frame() # start dataframe 
+
+# run it 
+for (i in 1:nrow(df_Exp2_MEANS)) {
+   count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
+   
+   loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
+   colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
+   loopDF           <- loopDF %>% 
+                            dplyr::mutate(
+                            Larvae_pCO2 = df_Exp2_MEANS[i,]$Larvae_pCO2,
+                            Age         = df_Exp2_MEANS[i,]$Age
+                          ) 
+  loopDF[c(1:count_dead),3] = 1 # 1 for dead 
+  loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
+
+  loopDF             <- data.frame(loopDF) # name dataframe for this single row
+  binary_Exp2_MEANS <- rbind(binary_Exp2_MEANS,loopDF) #bind to a cumulative list dataframe
+  
+}
+binary_Exp2_MEANS <- binary_Exp2_MEANS %>% 
+                      dplyr::mutate(Generation = 1) %>% 
+                      na.omit()
+
+```
+
+**note**: larval period ended at first sign of metamorphossi at 10 DPF  - truncate before this age to compare
+```{r filter larval period F1 Experiment #2}
+
+binary_Exp2_larvae      <- binary_Exp2_all %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+
+binary_Exp2_larvaeMEANS <- binary_Exp2_MEANS %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+
+```
+
+```{r surv object F1 Experiment #2}
+
+survExp2_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
+
+
+# convert Age to the proportion of time to metamorphosis 
+binary_Exp2_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp2_larvaeMEANS$Age / 10)
+
+
+
+survExp2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
+survExp2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
+
+
+```
+
+```{r plot Kaplan Meier F1 Experiment #2}
+
+Exp2_larvaeKaplanMeier <- survExp2 %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+
+Exp2_larvaeKaplanMeier <- survExp2_proptime %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+
+# plot the surv data
+pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier.pdf", width=5, height = 4)
+Exp2_larvaeKaplanMeier
+dev.off()
+
+Exp_10d_surv_prob <- survExp2 %>% 
+                          tbl_survfit(
+                            times = 10,
+                            label_header = "**survival to 10 days post-fertilization (95% CI)**"
+                          )
+
+
+```
+
+# Comparing survival times between groups (log-rank test)
+* We can conduct between-group significance tests using a log-rank test. The log-rank test equally weights observations over the entire follow-up time and is the most common way to compare survival times between groups. There are versions that more heavily weight the early or late follow-up that could be more appropriate depending on the research question (see ?survdiff for different test options).
+* We get the log-rank p-value using the survdiff function
+```{r log-rank test survdiff F1 Experiment #2}
+
+Exp2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
+#                              N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2      1340     1154     1216      3.14      10.6
+# Larvae_pCO2=Moderate pCO2 1084      946     1066     13.46      42.5
+# Larvae_pCO2=High pCO2      805      762      580     56.82     126.1
+
+```
+
+# The Cox regression model
+* We may want to quantify an effect size for a single variable, or include **more than one variable** into a regression model to account for the effects of multiple variables.
+* The Cox regression model is a semi-parametric model that can be used to fit univariable and multivariable regression models that have survival outcomes.
+```{r cox $ hazard ratio F1 Experiment #2}
+library(survminer) # ggforect hazard ratio plot
+
+#  Experimetn 1 all data 
+Exp2_coxph_test         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = binary_Exp2_larvae)
+Exp2_hazardratio_plot   <- ggforest(Exp2_coxph_test, data = binary_Exp2_larvae)
+Exp2_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = binary_Exp2_larvae) %>%  tbl_regression(exp = TRUE) 
+#                              coef exp(coef) se(coef)      z       p
+# Larvae_pCO2Moderate pCO2 -0.08592   0.91767  0.01963 -4.377 1.2e-05
+# Larvae_pCO2High pCO2      0.46739   1.59583  0.02121 22.036 < 2e-16
+# 1 | TankTRUE                   NA        NA  0.00000     NA      NA
+# 
+# Likelihood ratio test=655  on 2 df, p=< 2.2e-16
+# n= 16145, number of events= 14310
+
+
+# mean data - no tank 
+Exp2_coxph_testMEANS         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
+Exp2_hazardratio_plotMEANS   <- ggforest(Exp2_coxph_testMEANS, data = binary_Exp2_larvaeMEANS)
+Exp2_coxph_test_tableMEANS   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS) %>%  tbl_regression(exp = TRUE) 
+#                             coef exp(coef) se(coef)     z      p
+# Larvae_pCO2Moderate pCO2 -0.0869    0.9168   0.0439 -1.98 0.0477
+# Larvae_pCO2High pCO2      0.4650    1.5920   0.0474  9.81 <2e-16
+# 
+# Likelihood ratio test=130.3  on 2 df, p=< 2.2e-16
+# n= 3229, number of events= 2862
+
+
+# output yo stuff homie!
+capture.output(Exp2_coxph_test,file="Output/1_Survival_Growth/Experiment2_Survival_CoxReg.doc")
+capture.output(Exp2_coxph_testMEANS,file="Output/1_Survival_Growth/Experiment2_Survival_CoxRegMEANS.doc")
+
+
+pdf("Output/1_Survival_Growth/Experiment2_HazardRatio.pdf", width = 10, height = 6) # three figures
+ggarrange(
+  Exp2_hazardratio_plot,
+  Exp2_hazardratio_plotMEANS,
+  nrow = 2
+)
+dev.off()
+
+```
+
+
+
+
+
+
+### Experiment 4 F2s
+
+```{r format F2 Experiment #4}
+# create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
+df_Exp4 <- df_Exp4 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
           dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
           dplyr::mutate(Count_dead = case_when(proportion == 0 ~ 0,
                                                proportion >0 ~ (1/as.numeric(proportion))*
                                                  as.numeric(Count_alive))) # proportion is that of alive
-
 ```
 
-# Run two for loops 
+```{r convert to binary F2 Experiment #4}
 
- * (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
- 
- * (2) Mean counts alive and dead by tank - better representated for plots!
-
-### F1s binary loop 1
-```{r F1 build binary live and dead column - 1}
-# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
+# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not suitable for plotting
 
 # Call the cumulative dataframe that we will write to in the for loop below
-binary_df_F1_all     <- data.frame() # start dataframe  - all
+binary_Exp4_all     <- data.frame() # start dataframe  - all
 # run it 
-for (i in 1:nrow(df_F1)) {
-   count_alive <- round(df_F1[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_F1[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
+for (i in 1:nrow(df_Exp4)) {
+   count_alive <- round(df_Exp4[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp4[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
    
-   #count_alive <- round(df_F1[i,]$Count_alive) # raw counts
-   #count_dead  <- round(df_F1[i,]$Count_dead)  # raw counts
+   #count_alive <- round(df_Exp4[i,]$Count_alive) # raw counts
+   #count_dead  <- round(df_Exp4[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
-                            Parent_pCO2 = df_F1[i,]$Parent_pCO2,
-                            Larvae_pCO2 = df_F1[i,]$Larvae_pCO2,
-                            Generation  = df_F1[i,]$Generation,
-                            Tank        = df_F1[i,]$Tank,  
-                            Age         = df_F1[i,]$Age,
+                            Parent_pCO2 = df_Exp4[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_Exp4[i,]$Larvae_pCO2,
+                            Generation  = df_Exp4[i,]$Generation,
+                            Tank        = df_Exp4[i,]$Tank,  
+                            Age         = df_Exp4[i,]$Age,
                           ) 
   loopDF[c(1:count_dead),6] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
 
   loopDF           <- data.frame(loopDF) # name dataframe for this single row
-  binary_df_F1_all <- rbind(binary_df_F1_all,loopDF) #bind to a cumulative list dataframe
+  binary_Exp4_all <- rbind(binary_Exp4_all,loopDF) #bind to a cumulative list dataframe
 }
 # To address tank as a random factor it MUST be numeric, change this here
-unique(binary_df_F1_all$Tank) # "A" "B" "C" "D" "E" NA
-binary_df_F1_all <- binary_df_F1_all %>% 
-                    dplyr::mutate(Generation = 1,
-                                  Tank = case_when(Tank== 'A'~1,
-                                                   Tank== 'B'~2,
-                                                   Tank== 'C'~3,
-                                                   Tank== 'D'~4,
-                                                   Tank== 'E'~4)) %>% 
-                    na.omit()
-unique(binary_df_F1_all$Tank)  #1 2 3 4
-```
-
-### F1s binary loop 2
-```{r F1 build binary live and dead column - 2}
-# (2) Mean counts alive and dead by tank - better representated for plots!
-
-# for loop for plotting!! 
-# difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
-df_F1_MEANS <- df_F1 %>% 
-              dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
-              dplyr::group_by(Larvae_pCO2, Age) %>% 
-              dplyr::summarise(mean_Count_alive = mean(Count_alive), 
-                               mean_Count_dead = mean(Count_dead))
-
-# call datafarme binary for plotting
-binary_df_F1_MEANS       <- data.frame() # start dataframe 
-
-# run it 
-for (i in 1:nrow(df_F1_MEANS)) {
-   count_alive <- round(df_F1_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_F1_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
-   
-   loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
-   colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
-   loopDF           <- loopDF %>% 
-                            dplyr::mutate(
-                            Larvae_pCO2 = df_F1_MEANS[i,]$Larvae_pCO2,
-                            Age         = df_F1_MEANS[i,]$Age
-                          ) 
-  loopDF[c(1:count_dead),3] = 1 # 1 for dead 
-  loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
-
-  loopDF             <- data.frame(loopDF) # name dataframe for this single row
-  binary_df_F1_MEANS <- rbind(binary_df_F1_MEANS,loopDF) #bind to a cumulative list dataframe
-  
-}
-binary_df_F1_MEANS <- binary_df_F1_MEANS %>% 
-                      dplyr::mutate(Generation = 1) %>% 
-                      na.omit()
-```
-
-### F2s binary loop 1
-```{r F2 build binary live and dead column - 1}
-# (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
-
-# keep tank to use as a random effect in the cox model!
-# Call the cumulative dataframe that we will write to in the for loop below
-binary_df_F2_all     <- data.frame() # start dataframe  - all
-
-# run it 
-for (i in 1:nrow(df_F2)) {
-   count_alive <- round(df_F2[i,]$Count_alive/1000) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_F2[i,]$Count_dead/1000)  # divide all counts by 1000, round to nearest
-   
-   loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
-   colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
-   loopDF           <- loopDF %>% 
-                            dplyr::mutate(
-                            Parent_pCO2 = df_F2[i,]$Parent_pCO2,
-                            Larvae_pCO2 = df_F2[i,]$Larvae_pCO2,
-                            Generation  = df_F2[i,]$Generation,
-                            Tank        = df_F2[i,]$Tank,  
-                            Age         = df_F2[i,]$Age,
-                          ) 
-  loopDF[c(1:count_dead),6] = 1 # 1 for dead 
-  loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
-
-  loopDF           <- data.frame(loopDF) # name dataframe for this single row
-  binary_df_F2_all <- rbind(binary_df_F2_all,loopDF) #bind to a cumulative list dataframe
-}
-# To address tank as a random factor it MUST be numeric, change this here
-unique(binary_df_F2_all$Tank) # "A" "B" "C" NA 
-binary_df_F2_all <- binary_df_F2_all %>% 
+unique(binary_Exp4_all$Tank) # "A" "B" "C" "D" "E" NA
+binary_Exp4_all <- binary_Exp4_all %>% 
                     dplyr::mutate(Generation = 2,
                                   Tank = case_when(Tank== 'A'~1,
                                                    Tank== 'B'~2,
                                                    Tank== 'C'~3)) %>% 
                     na.omit()
-unique(binary_df_F2_all$Tank)  #1 2 3 
 
-```
 
-### F2s binary loop 2
-```{r F2 build binary live and dead column - 2}
-# (2) Mean counts alive and dead by tank - better presentative for plots!
-
-# for loop for plotting!! 
+# (2) Mean counts alive and dead by tank - better representated for plots!
 # difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
-df_F2_MEANS <- df_F2 %>% 
+df_Exp4_MEANS <- df_Exp4 %>% 
               dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
               dplyr::group_by(Larvae_pCO2, Age) %>% 
               dplyr::summarise(mean_Count_alive = mean(Count_alive), 
                                mean_Count_dead = mean(Count_dead))
+
 # call datafarme binary for plotting
-binary_df_F2_MEANS       <- data.frame() # start dataframe 
+binary_Exp4_MEANS       <- data.frame() # start dataframe 
 
 # run it 
-for (i in 1:nrow(df_F2_MEANS)) {
-   count_alive <- round(df_F2_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_F2_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
+for (i in 1:nrow(df_Exp4_MEANS)) {
+   count_alive <- round(df_Exp4_MEANS[i,]$mean_Count_alive/1000) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp4_MEANS[i,]$mean_Count_dead/1000)  # divide all counts by 1000, round to nearest
    
    loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
-                            Larvae_pCO2 = df_F2_MEANS[i,]$Larvae_pCO2,
-                            Age         = df_F2_MEANS[i,]$Age
+                            Larvae_pCO2 = df_Exp4_MEANS[i,]$Larvae_pCO2,
+                            Age         = df_Exp4_MEANS[i,]$Age
                           ) 
   loopDF[c(1:count_dead),3] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),3] = 0 # 0 for alive
 
   loopDF             <- data.frame(loopDF) # name dataframe for this single row
-  binary_df_F2_MEANS <- rbind(binary_df_F2_MEANS,loopDF) #bind to a cumulative list dataframe
+  binary_Exp4_MEANS <- rbind(binary_Exp4_MEANS,loopDF) #bind to a cumulative list dataframe
   
 }
-binary_df_F2_MEANS <- binary_df_F2_MEANS %>% 
+binary_Exp4_MEANS <- binary_Exp4_MEANS %>% 
                       dplyr::mutate(Generation = 2) %>% 
                       na.omit()
+
 ```
 
-### Rbind data for F1_F2 comparisons
-* NOTE: omit the 'high' treamtent in F1 as tihs was not present in F2 larvae
-```{r merge datasets}
+**note**: larval period ended at first sign of metamorphossi at 14 DPF  - truncate before this age to compare
+```{r filter larval period F2 Experiment #4}
+
+binary_Exp4_larvae      <- binary_Exp4_all %>% filter(Age <=14) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+
+binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+
+```
+
+```{r surv object F2 Experiment #4}
+
+survExp4_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+
+# convert Age to the proportion of time to metamorphosis 
+binary_Exp4_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp4_larvaeMEANS$Age / 14)
+
+survExp4          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+survExp4_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+```
+
+```{r plot Kaplan Meier F2 Experiment #4}
+
+Exp4_larvaeKaplanMeier <- survExp4 %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        add_risktable() +
+                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+
+Exp4_larvaeKaplanMeier <- survExp4_proptime %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Proportion time to metamorphosis",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
+# plot the surv data
+pdf("Output/1_Survival_Growth/Expeirment4_Survival_KaplanMeier.pdf", width=5, height = 4)
+Exp4_larvaeKaplanMeier
+dev.off()
+
+Exp4_14d_surv_prob <- survExp4 %>% 
+                          tbl_survfit(
+                            times = 14,
+                            label_header = "**survival to 10 days post-fertilization (95% CI)**"
+                          )
+```
+
+# Comparing survival times between groups (log-rank test)
+* We can conduct between-group significance tests using a log-rank test. The log-rank test equally weights observations over the entire follow-up time and is the most common way to compare survival times between groups. There are versions that more heavily weight the early or late follow-up that could be more appropriate depending on the research question (see ?survdiff for different test options).
+* We get the log-rank p-value using the survdiff function
+```{r log-rank test survdiff F2 Experiment #4}
+
+Exp4_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+#                             N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2      334      250      237     0.689       1.9
+# Larvae_pCO2=Moderate pCO2 481      335      348     0.470       1.9
+
+```
+
+# The Cox regression model
+* We may want to quantify an effect size for a single variable, or include **more than one variable** into a regression model to account for the effects of multiple variables.
+* The Cox regression model is a semi-parametric model that can be used to fit univariable and multivariable regression models that have survival outcomes.
+```{r cox & hazard ratio F2 Experiment #4}
+library(survminer) # ggforect hazard ratio plot
+
+binary_Exp4_larvae$Larvae_pCO2 <- factor(binary_Exp4_larvae$Larvae_pCO2, exclude = 'High pCO2')
+#  Experimetn 1 all data 
+Exp4_coxph_test         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = binary_Exp4_larvae)
+Exp4_hazardratio_plot   <- ggforest(Exp4_coxph_test, data = binary_Exp4_larvae)
+Exp4_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = binary_Exp4_larvae) %>%  tbl_regression(exp = TRUE) 
+#                              coef exp(coef) se(coef)      z       p
+# Larvae_pCO2Moderate pCO2 -0.12657   0.88111  0.04822 -2.625 0.00867
+# 
+# Likelihood ratio test=6.84  on 1 df, p=0.008898
+# n= 2451, number of events= 1761 
+
+binary_Exp4_larvaeMEANS$Larvae_pCO2 <- factor(binary_Exp4_larvaeMEANS$Larvae_pCO2, exclude = 'High pCO2')
+# mean data - no tank 
+Exp4_coxph_testMEANS         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+Exp4_hazardratio_plotMEANS   <- ggforest(Exp4_coxph_testMEANS, data = binary_Exp4_larvaeMEANS)
+Exp4_coxph_test_tableMEANS   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS) %>%  tbl_regression(exp = TRUE) 
+#                              coef exp(coef) se(coef)      z     p
+# Larvae_pCO2Moderate pCO2 -0.13089   0.87732  0.08366 -1.564 0.118
+# 
+# Likelihood ratio test=2.43  on 1 df, p=0.119
+# n= 815, number of events= 585 
+
+
+
+# output yo stuff homie!
+capture.output(Exp4_coxph_test,file="Output/1_Survival_Growth/Experiment4_Survival_CoxReg.doc")
+capture.output(Exp4_coxph_testMEANS,file="Output/1_Survival_Growth/Experiment4_Survival_CoxRegMEANS.doc")
+
+
+pdf("Output/1_Survival_Growth/Experiment4_HazardRatio.pdf", width = 10, height = 6) # three figures
+ggarrange(
+  Exp4_hazardratio_plot,
+  Exp4_hazardratio_plotMEANS,
+  nrow = 2
+)
+dev.off()
+
+
+```
+
+
+
+
+### Experiment 2 and 4 MERGE DATA
+
+**about**: we have parallel datasets to use in a signle manuscript - merge the binary files and run stats / plots
+
+**note**: the proportion time to metamorphosis column is *already accounted for* with the different times to metamorphossis!
+
+* NOTE: omit the 'high' treatment in F1 as this was not present in F2 larvae
+```{r merge Experiments 2 and 4}
 # all - with tank replicate included
-binary_df_F1_F2_all             <- rbind(binary_df_F1_all, binary_df_F2_all) %>% 
+binary_Exp2_Exp4_all             <- rbind(binary_Exp2_larvae, binary_Exp4_larvae) %>% 
                                          dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
                                          dplyr::mutate(Prop_time_metamophosis = 
                                                             case_when(Generation == 1 ~ (Age / 10),
                                                                       Generation == 2 ~ (Age / 14))) %>% 
                                          # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
                                          dplyr::filter(!Prop_time_metamophosis >1) 
-binary_df_F1_F2_all$Larvae_pCO2 <- factor(binary_df_F1_F2_all$Larvae_pCO2, exclude = 'High pCO2')
+binary_Exp2_Exp4_all$Larvae_pCO2 <- factor(binary_Exp2_Exp4_all$Larvae_pCO2, exclude = 'High pCO2')
 
 #  by mean tank
-binary_df_F1_F2_MEANS             <- rbind(binary_df_F1_MEANS, binary_df_F2_MEANS) %>% 
+binary_Exp2_Exp4_MEANS             <- rbind(binary_Exp2_larvaeMEANS, binary_Exp4_larvaeMEANS ) %>% 
                                            dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
                                            dplyr::mutate(Prop_time_metamophosis = 
                                                             case_when(Generation == 1 ~ (Age / 10),
                                                                       Generation == 2 ~ (Age / 14))) %>% 
                                          # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
                                          dplyr::filter(!Prop_time_metamophosis >1) 
-binary_df_F1_F2_MEANS$Larvae_pCO2 <- factor(binary_df_F1_F2_MEANS$Larvae_pCO2, exclude = 'High pCO2')
+binary_Exp2_Exp4_MEANS$Larvae_pCO2 <- factor(binary_Exp2_Exp4_MEANS$Larvae_pCO2, exclude = 'High pCO2')
 
 
-```
-## Truncate binary master files by the larval period! 
+# sanity check
+binary_Exp2_Exp4_all %>% dplyr::filter(Prop_time_metamophosis > 1) # should be no data!
+binary_Exp2_Exp4_MEANS %>% dplyr::filter(Prop_time_metamophosis > 1) # should be no data!
 
-* note that metamorphosis was observed at 10 dpf in F1s and 14 dpf in F2s, therfore 
-larval survival comapred across gnerations should only show < 10 dpf survival 
 
-```{r IMPORTNAT truncate <10DPF}
-# all
-df_F1_all_larvae    <- binary_df_F1_all %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-df_F2_all_larvae    <- binary_df_F2_all %>% filter(Age <=10) # F2- aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-df_F1_F2_all_larvae <- binary_df_F1_F2_all  %>% filter(!Prop_time_metamophosis >1) # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
-df_F1_F2_all_larvaeLOW <- df_F1_F2_all_larvae %>% filter(Larvae_pCO2 %in% "Low pCO2")
-df_F1_F2_all_larvaeMOD <- df_F1_F2_all_larvae %>% filter(Larvae_pCO2 %in% "Moderate pCO2")
-# mean data by tank replicate within treatment
-df_F1_MEANS_larvae    <- binary_df_F1_MEANS %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons 
-df_F2_MEANS_larvae    <- binary_df_F2_MEANS %>% filter(Age <=10) # F2- aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-df_F1_F2_MEANS_larvae <- binary_df_F1_F2_MEANS  %>% filter(!Prop_time_metamophosis >1) # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
-df_F1_F2_MEANS_larvaeLOW <- df_F1_F2_MEANS_larvae %>% filter(Larvae_pCO2 %in% "Low pCO2") # comparisons to ACTUAL developmental timing as proportion time
-df_F1_F2_MEANS_larvaeMOD <- df_F1_F2_MEANS_larvae %>% filter(Larvae_pCO2 %in% "Moderate pCO2") # comparisons to ACTUAL developmental timing as proportion time
+# Subsets to explore further 
+binary_Exp2_Exp4_larvaeLOW       <- binary_Exp2_Exp4_all %>% filter(Larvae_pCO2 %in% "Low pCO2")
+binary_Exp2_Exp4_MEANS_larvaeLOW <- binary_Exp2_Exp4_MEANS %>% filter(Larvae_pCO2 %in% "Low pCO2") 
+
+binary_Exp2_Exp4_larvaeMOD       <- binary_Exp2_Exp4_all %>% filter(Larvae_pCO2 %in% "Moderate pCO2")
+binary_Exp2_Exp4_MEANS_larvaeMOD <- binary_Exp2_Exp4_MEANS %>% filter(Larvae_pCO2 %in% "Moderate pCO2") 
+
 # what days are included?
-unique(df_F1_all_larvae$Age) # 2  4  8 10
-unique(df_F2_all_larvae$Age) # 2  6  8 10
-unique(df_F1_F2_all_larvae$Age) #  2  4  8 10  6 14
+unique(binary_Exp2_larvae$Age) # 2  4  8 10
+unique(binary_Exp4_larvae$Age) # 2  6  8 10
+unique(binary_Exp2_Exp4_all$Age) #  2  4  8 10  6 14
 
-unique(df_F1_MEANS_larvae$Age) # 2  4  8 10
-unique(df_F2_MEANS_larvae$Age) # 2  6  8 10
-unique(df_F1_F2_MEANS_larvae$Age) #  2  4  8 10  6 14
+unique(binary_Exp2_larvaeMEANS$Age) # 2  4  8 10
+unique(binary_Exp4_larvaeMEANS$Age) # 2  6  8 10
+unique(binary_Exp2_Exp4_MEANS$Age) #  2  4  8 10  6 14
+
 ```
 
 ## Surv object with all data v. mean data
-
-  * note you can see the CI for the 'all' data surv object is small - these are 0s and 1s for each
-
-  * note there is a large CI for the 'mean' data 
-  
-```{r F1 & F2 create surv object}
-
-s1_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_df_F1_MEANS)
+* note you can see the CI for the 'all' data surv object is small - these are 0s and 1s for each
+* note there is a large CI for the 'mean' data 
+```{r surv object merge F1 & F2}
 
 
-# convert Age to the proportion of time to metamorphosis 
-df_F1_MEANS_larvae$Prop_time_metamophosis <- (df_F1_MEANS_larvae$Age / 10)
-df_F2_MEANS_larvae$Prop_time_metamophosis <- (df_F2_MEANS_larvae$Age / 14)
+s1_2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
+s1_2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
 
 
+s1_2LOW          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeLOW)
+s1_2proptimeLOW  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeLOW)
 
-s1          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
-s1_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
-
-
-s2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
-s2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
-
-
-s1_2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
-s1_2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
-
-
-
-
-s1_2LOW          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeLOW)
-s1_2proptimeLOW  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeLOW)
-
-s1_2MOD          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeMOD)
-s1_2proptimeMOD  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = df_F1_F2_MEANS_larvaeMOD)
-```
-# Kaplan Meier plots 
-* F1 - all treatments and as age & proportion time to metamorphosis
-```{r F1 plot}
-
-F1_larvaeKaplanMeier <- s1 %>% 
-                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                        scale_color_manual(values = c("forestgreen","orange","purple")) +
-                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
-                        labs(
-                          x = "Days",
-                          y = "Overall survival probability"
-                        ) + 
-                        add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                       # add_pvalue(location  = "annotation", x = 8.5)
-
-F1_larvaeKaplanMeier <- s1_proptime %>% 
-                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                        scale_color_manual(values = c("forestgreen","orange","purple")) +
-                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
-                        labs(
-                          x = "Proportion time to metamorphosis",
-                          y = "Overall survival probability"
-                        ) + 
-                        add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
-                       # add_pvalue(location  = "annotation", x = 8.5)
-```
-* F2 - all treatments and as age &  proportion time to metamorphosis
-```{r F2 plot}
-
-F2_larvaeKaplanMeier <- s2 %>% 
-                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                        scale_color_manual(values = c("forestgreen","orange")) +
-                        scale_fill_manual(values = c("forestgreen","orange")) +
-                        labs(
-                          x = "Days",
-                          y = "Overall survival probability"
-                        ) + 
-                        add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                       # add_pvalue(location  = "annotation", x = 8.5)
-
-
-F2_larvaeKaplanMeier <- s2_proptime %>% 
-                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                        scale_color_manual(values = c("forestgreen","orange")) +
-                        scale_fill_manual(values = c("forestgreen","orange")) +
-                        labs(
-                          x = "Proportion time to metamorphosis",
-                          y = "Overall survival probability"
-                        ) + 
-                        add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                       # add_pvalue(location  = "annotation", x = 8.5)
+s1_2MOD          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeMOD)
+s1_2proptimeMOD  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeMOD)
 ```
 
 
-* F1 & F2 - low vs, mod and ONLY as proportion time to metamorphosis
-```{r F1 & F2 plot low v. mod treatments as prop time to metamorphosis }
+```{r plot Kaplan Meier merge F1 & F2}
 
-F1_F2_larvaeKaplanMeier <- s1_2_proptime %>% 
+Exp2_Exp4_larvaeKaplanMeier <- s1_2_proptime %>% 
                         ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
                         scale_color_manual(values = c("green","forestgreen",
                                                       "orange","darkorange4")) +
@@ -613,17 +860,13 @@ F1_F2_larvaeKaplanMeier <- s1_2_proptime %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
 
-
 # output plot 
-pdf(paste0("Output/Survival/F1_F2_Mod_Low_Survival_ggsurvfit.pdf"),width=8, height=4)
-print(F1_F2_larvaeKaplanMeier)
+pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier.pdf"),width=8, height=4)
+print(Exp2_Exp4_larvaeKaplanMeier)
 dev.off()
-```
 
-* F1 & F2 - Explore generation effect within treatment - low ONLY as proportion time to metamorphosis
-```{r F1 & F2 plot low ONLY as prop time to metamorphosis }
 
-F1_F2_larvaeKaplanMeierLOW <- s1_2proptimeLOW %>% 
+Exp2_Exp4_larvaeKaplanMeierLOW <- s1_2proptimeLOW %>% 
                         ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
                         scale_color_manual(values = c("green","forestgreen")) +
                         scale_fill_manual(values = c("green","forestgreen")) +
@@ -632,15 +875,18 @@ F1_F2_larvaeKaplanMeierLOW <- s1_2proptimeLOW %>%
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
-```
-* F1 & F2 - Explore generation effect within treatment - moderate ONLY as proportion time to metamorphosis
-```{r F1 & F2 plot moderate ONLY as prop time to metamorphosis }
+# output plot 
+pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier_LowpCO2.pdf"),width=8, height=4)
+print(Exp2_Exp4_larvaeKaplanMeierLOW)
+dev.off()
 
-F1_F2_larvaeKaplanMeierMOD <- s1_2proptimeMOD %>% 
+
+
+Exp2_Exp4_larvaeKaplanMeierMOD <- s1_2proptimeMOD %>% 
                         ggsurvfit(linetype_aes = FALSE, linewidth = 1) +
                         scale_color_manual(values = c("orange","darkorange")) +
                         scale_fill_manual(values = c("orange","darkorange")) +
@@ -649,37 +895,122 @@ F1_F2_larvaeKaplanMeierMOD <- s1_2proptimeMOD %>%
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # symbol = "\U25CF", size = 10
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
+# output plot 
+pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier_ModeratepCO2.pdf"),width=8, height=4)
+print(Exp2_Exp4_larvaeKaplanMeierMOD)
+dev.off()
+
+
 ```
 
 
-## Estimating x-time survival
-* per 10 days post fertilization?
-```{r}
+```{r log-rank test survdiff  merge F1 & F2}
 
-F1_10d_surv_prob <- s1 %>% 
-                          tbl_survfit(
-                            times = 10,
-                            label_header = "**survival to 10 days post-fertilization (95% CI)**"
-                          )
-
-F2_10d_surv_prob <- s2 %>% 
-                          tbl_survfit(
-                            times = 10,
-                            label_header = "**survival to 10 days post-fertilization (95% CI)**"
-                          )
-
-
-F1_F2_10d_surv_prob <- s1_2 %>% 
-                          tbl_survfit(
-                            times = 10,
-                            label_header = "**survival to 10 days post-fertilization (95% CI)**"
-                          )
+F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
+#                                            N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2, Generation=1      1340     1154      977      32.2      84.2
+# Larvae_pCO2=Low pCO2, Generation=2       334      250      343      25.2      54.7
+# Larvae_pCO2=Moderate pCO2, Generation=1 1084      946      861       8.3      20.3
+# Larvae_pCO2=Moderate pCO2, Generation=2  481      335      504      56.7     131.7
+# 
+#  Chisq= 227  on 3 degrees of freedom, p= <2e-16
 
 ```
+
+
+```{r cox & hazard ratio merge F1 & F2}
+
+
+binary_Exp2_Exp4_MEANS$Generation <- as.character(binary_Exp2_Exp4_MEANS$Generation)
+binary_Exp2_Exp4_MEANS$Gen_pCO2 <- paste0(as.character(binary_Exp2_Exp4_MEANS$Generation),'_',(binary_Exp2_Exp4_MEANS$Larvae_pCO2))
+
+
+Exp2_Exp4_coxph_test <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, data = binary_Exp2_Exp4_MEANS)
+Exp2_Exp4_hazardratio_plot <- ggforest(Exp2_Exp4_coxph_test, data = binary_Exp2_Exp4_MEANS)
+Exp2_Exp4_coxph_test_table <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, data = binary_Exp2_Exp4_MEANS) %>% tbl_regression(exp = TRUE) 
+#                             coef exp(coef) se(coef)      z      p
+# Gen_pCO21_Moderate pCO2 -0.09762   0.90700  0.04390 -2.224 0.0262
+# Gen_pCO22_Low pCO2      -0.01664   0.98350  0.07004 -0.238 0.8122
+# Gen_pCO22_Moderate pCO2 -0.14228   0.86738  0.06237 -2.281 0.0225
+# 
+# Likelihood ratio test=8.14  on 3 df, p=0.0432
+# n= 3239, number of events= 2685 
+
+capture.output(Exp2_Exp4_coxph_test,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxRegMEANS.doc")
+
+pdf("Output/1_Survival_Growth/Experiments2&4_HazardRatio.pdf", width = 10, height = 3) # three figures
+print(Exp2_Exp4_hazardratio_plot)
+dev.off()
+
+
+
+# Low gen 1 vs Low Gen 2
+binary_Exp2_Exp4_MEANS_larvaeLOW$Generation <- as.character(binary_Exp2_Exp4_MEANS_larvaeLOW$Generation)
+
+Exp2_Exp4_coxph_testLOW       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                                       data = binary_Exp2_Exp4_MEANS_larvaeLOW)
+Exp2_Exp4_hazardratio_plotLOW <- ggforest(Exp2_Exp4_coxph_testLOW, 
+                                          data = binary_Exp2_Exp4_MEANS_larvaeLOW)
+Exp2_Exp4_coxph_test_tableLOW <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                                       data = binary_Exp2_Exp4_MEANS_larvaeLOW) %>% tbl_regression(exp = TRUE) 
+
+                # coef exp(coef) se(coef)      z     p
+# Generation2 -0.04029   0.96051  0.07030 -0.573 0.567
+
+capture.output(Exp2_Exp4_coxph_testLOW,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxRegMEANS_LowpCO2.doc")
+
+pdf("Output/1_Survival_Growth/Experiments2&4_HazardRatio_LowpCO2.pdf", width = 10, height = 3) # three figures
+print(Exp2_Exp4_hazardratio_plotLOW)
+dev.off()
+
+# Mod gen 1 vs Low Gen 2
+binary_Exp2_Exp4_MEANS_larvaeMOD$Generation <- as.character(binary_Exp2_Exp4_MEANS_larvaeMOD$Generation)
+
+Exp2_Exp4_coxph_testMOD       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                                       data = binary_Exp2_Exp4_MEANS_larvaeMOD)
+Exp2_Exp4_hazardratio_plotMOD <- ggforest(Exp2_Exp4_coxph_testMOD, 
+                                          data = binary_Exp2_Exp4_MEANS_larvaeMOD)
+Exp2_Exp4_coxph_test_tableMOD <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+                                       data = binary_Exp2_Exp4_MEANS_larvaeMOD) %>% tbl_regression(exp = TRUE) 
+
+                # coef exp(coef) se(coef)      z     p
+# Generation2 -0.01658   0.98355  0.06429 -0.258 0.796
+
+capture.output(Exp2_Exp4_coxph_testMOD,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxRegMEANS_ModeratepCO2.doc")
+
+pdf("Output/1_Survival_Growth/Experiments2&4_HazardRatio_ModeratepCO2.pdf", width = 10, height = 3) # three figures
+print(Exp2_Exp4_hazardratio_plotMOD)
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+```{r format F3 Experiment #6}
+# create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
+df_Exp6 <- df_Exp6 %>% 
+          dplyr::mutate(Count = 
+                          as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
+          dplyr::mutate(Count_dead = case_when(proportion == 0 ~ 0,
+                                               proportion >0 ~ (1/as.numeric(proportion))*
+                                                 as.numeric(Count_alive))) # proportion is that of alive
+```
+
+
+
+
+
 
 ## Estimating x-time survival
 * per 8 days from day 2 to 18 post fertilization
@@ -720,156 +1051,20 @@ for (i in 1:length(x)) { # for loop
 # Comparing survival times between groups (log-rank test)
 * We can conduct between-group significance tests using a log-rank test. The log-rank test equally weights observations over the entire follow-up time and is the most common way to compare survival times between groups. There are versions that more heavily weight the early or late follow-up that could be more appropriate depending on the research question (see ?survdiff for different test options).
 
-* We get the log-rank p-value using the survdiff function
-```{r log-rank test survdiff}
-
-F1_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F1_MEANS_larvae)
-#                              N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2      1340     1154     1216      3.14      10.6
-# Larvae_pCO2=Moderate pCO2 1084      946     1066     13.46      42.5
-# Larvae_pCO2=High pCO2      805      762      580     56.82     126.1
-
-F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_MEANS_larvae)
-#                             N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2      280      199      188     0.688      1.98
-# Larvae_pCO2=Moderate pCO2 403      268      279     0.462      1.98
-
-F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = df_F1_F2_MEANS_larvae)
-#                                            N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2, Generation=1      1340     1154      977      32.2      84.2
-# Larvae_pCO2=Low pCO2, Generation=2       334      250      343      25.2      54.7
-# Larvae_pCO2=Moderate pCO2, Generation=1 1084      946      861       8.3      20.3
-# Larvae_pCO2=Moderate pCO2, Generation=2  481      335      504      56.7     131.7
-```
-
-
-# The Cox regression model
-
- * We may want to quantify an effect size for a single variable, or include **more than one variable** into a regression model to account for the effects of multiple variables.
-
-* The Cox regression model is a semi-parametric model that can be used to fit univariable and multivariable regression models that have survival outcomes.
-
-```{r cox for multiple variables - random tank effect with all data}
-library(survminer) # ggforect hazard ratio plot
-
-# F1 all treatments
-F1_coxph_test       <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae)
-F1_hazardratio_plot <- ggforest(F1_coxph_test, data = df_F1_all_larvae)
-F1_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F1_all_larvae) %>%  tbl_regression(exp = TRUE) 
-#                              coef exp(coef) se(coef)      z        p
-# Larvae_pCO2Moderate pCO2 -0.08286   0.92048  0.01939 -4.272 1.93e-05
-# Larvae_pCO2High pCO2      0.46824   1.59718  0.02121 22.080  < 2e-16
-# 1 | TankTRUE                   NA        NA  0.00000     NA       NA
-
-F2_coxph_test <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), data = df_F2_all_larvae)
-F2_hazardratio_plot <- ggforest(F2_coxph_test, data = df_F2_all_larvae)
-F2_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = df_F2_all_larvae) %>% 
-                              tbl_regression(exp = TRUE) 
-#                              coef exp(coef) se(coef)      z       p
-# Larvae_pCO2Moderate pCO2 -0.15145   0.85946  0.05402 -2.803 0.00506
-
-df_F1_F2_all_larvae$Generation <- as.character(df_F1_F2_all_larvae$Generation)
-F1_F2_coxph_test <- coxph(formula = Surv(Pro, Count_dead) ~ Larvae_pCO2+Generation+(1|Tank), data = df_F1_F2_all_larvae)
-F1_F2_hazardratio_plot <- ggforest(F1_F2_coxph_test, data = df_F1_F2_all_larvae)
-F1_F2_coxph_test_table <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2*Generation+(1|Tank), data = df_F1_F2_all_larvae) %>% tbl_regression(exp = TRUE) 
-#                                         coef exp(coef) se(coef)      z        p
-# Larvae_pCO2Moderate pCO2            -0.01726   0.98289  0.06645 -0.260    0.795
-# Generation                          -0.25022   0.77863  0.04297 -5.823 5.79e-09
-# 1 | TankTRUE                              NA        NA  0.00000     NA       NA
-# Larvae_pCO2Moderate pCO2:Generation -0.06632   0.93584  0.05733 -1.157    0.247
-
-
-
-# Low gen 1 vs Low Gen 2
-df_F1_F2_all_larvaeLOW$Generation <- as.character(df_F1_F2_all_larvaeLOW$Generation)
-F1_F2_coxph_testLOW <- coxph(formula = Surv(Age, Count_dead) ~ Generation, 
-                            data = df_F1_F2_all_larvaeLOW)
-F1_F2_hazardratio_plotLOW <- ggforest(F1_F2_coxph_testLOW, data = df_F1_F2_all_larvaeLOW)
-
-
-# Mod gen 1 vs Low Gen 2
-df_F1_F2_all_larvaeMOD$Generation <- as.character(df_F1_F2_all_larvaeMOD$Generation)
-F1_F2_coxph_testMOD <- coxph(formula = Surv(Age, Count_dead) ~ Generation, 
-                            data = df_F1_F2_all_larvaeMOD)
-F1_F2_hazardratio_plotMOD <- ggforest(F1_F2_coxph_testMOD, data = df_F1_F2_all_larvaeMOD)
-
-
-```
-
-
-```{r cox  for multiple variables - mean data}
-library(survminer) # ggforect hazard ratio plot
-
-
-# F1 - low mod and high  AGE
-F1_coxph_testMEAN        <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
-                                  data = df_F1_MEANS_larvae)
-F1_hazardratio_plotMEAN <- ggforest(F1_coxph_testMEAN, data = df_F1_MEANS_larvae)
-F1_coxph_test_tableMEAN <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2,
-                                 data = df_F1_MEANS_larvae) %>%  tbl_regression(exp = TRUE) 
-#                              coef exp(coef) se(coef)      z      p
-# Larvae_pCO2Moderate pCO2 -0.08374   0.91967  0.04337 -1.931 0.0535
-# Larvae_pCO2High pCO2      0.46589   1.59343  0.04740  9.830 <2e-16
 
 
 
 
-
-
-
-# F2 - low mod and high  AGE
-df_F2_MEANS_larvae$Larvae_pCO2 <- droplevels(df_F2_MEANS_larvae$Larvae_pCO2) 
-levels(df_F2_MEANS_larvae$Larvae_pCO2) <- c('Low pCO2', 'Moderate pCO2')
-F2_coxph_testMEANS       <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
-                                  data = df_F2_MEANS_larvae)
-F2_hazardratio_plotMEANS <- ggforest(F2_coxph_testMEANS, data = df_F2_MEANS_larvae)
-F2_coxph_test_tableMEANS <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, 
-                                  data = df_F1_MEANS_larvae) %>% tbl_regression(exp = TRUE) 
-#                              coef exp(coef) se(coef)      z     p
-# Larvae_pCO2Moderate pCO2 -0.14927   0.86133  0.09371 -1.593 0.111
-
-
-
-
-
-
-# F1 and F2 - as AGE
-df_F1_F2_MEANS_larvae$Generation <- as.character(df_F1_F2_MEANS_larvae$Generation) # make generation a character not a integer
-df_F1_F2_MEANS_larvae$Gen_pCO2   <- paste0(df_F1_F2_MEANS_larvae$Generation, df_F1_F2_MEANS_larvae$Larvae_pCO2) # new column for hazard ratio
-F1_F2_coxph_testBOTH       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
-                                    data = df_F1_F2_MEANS_larvae)
-F1_F2_hazardratio_plotBOTH <- ggforest(F1_F2_coxph_testBOTH, data = df_F1_F2_MEANS_larvae)
-
-
-pdf("Output/Survival/F1_F2_Mod_Low_Survival_hazardratio.pdf",width=6, height=2)
-print(F1_F2_hazardratio_plotBOTH)
-dev.off()
-
-# F1 and F2 WITHIN TREATMENT AND AS PROPORTION TIME TO METAMORPHOSIS
-# Low gen 1 vs Low Gen 2
-df_F1_F2_MEANS_larvaeLOW$Generation <- as.character(df_F1_F2_MEANS_larvaeLOW$Generation)
-F1_F2_coxph_testLOW <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
-                            data = df_F1_F2_MEANS_larvaeLOW)
-F1_F2_hazardratio_plotLOW <- ggforest(F1_F2_coxph_testLOW, data = df_F1_F2_MEANS_larvaeLOW)
-
-
-# Mod gen 1 vs Low Gen 2
-df_F1_F2_MEANS_larvaeMOD$Generation <- as.character(df_F1_F2_MEANS_larvaeMOD$Generation)
-F1_F2_coxph_testMOD <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
-                            data = df_F1_F2_MEANS_larvaeMOD)
-F1_F2_hazardratio_plotMOD <- ggforest(F1_F2_coxph_testMOD, data = df_F1_F2_MEANS_larvaeMOD)
-
-```
 
 ```{r}
 # (1) Including tank - to use as surv object in coxme statistics (random factor included!) not surtable for plotting
 # build the surv object! 
 # with tank included in the data frame (first for loop above)
-surv_F1_all  <- Surv(time = as.numeric(binary_df_F1_all$Age), 
-                     event = as.numeric(binary_df_F1_all$Count_dead), type = "right")
+surv_F1_all  <- Surv(time = as.numeric(binary_Exp2_all$Age), 
+                     event = as.numeric(binary_Exp2_all$Count_dead), type = "right")
 
 # plot the surv data
-ggsurvplot(survfit(surv_F1_all ~ Larvae_pCO2, binary_df_F1_all), 
+ggsurvplot(survfit(surv_F1_all ~ Larvae_pCO2, binary_Exp2_all), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
            ggtheme = theme_survminer(),
@@ -882,10 +1077,10 @@ ggsurvplot(survfit(surv_F1_all ~ Larvae_pCO2, binary_df_F1_all),
 # (2) Mean counts alive and dead by tank - better presentative for plots!
 # build the surv object! 
 # with tank included in the data frame (first for loop above)
-surv_F1_means_all  <- Surv(time = as.numeric(binary_df_F1_MEANS$Age), 
-                     event = as.numeric(binary_df_F1_MEANS$Count_dead), type = "right")
+surv_F1_means_all  <- Surv(time = as.numeric(binary_Exp2_MEANS$Age), 
+                     event = as.numeric(binary_Exp2_MEANS$Count_dead), type = "right")
 # with the mean data by  tank replicate! better - save this one
-ggsurvplot(survfit(surv_F1_means_all ~ Larvae_pCO2, binary_df_F1_MEANS), 
+ggsurvplot(survfit(surv_F1_means_all ~ Larvae_pCO2, binary_Exp2_MEANS), 
            risk.table = F, pval = F , conf.int = TRUE,
            palette = alpha(c("forestgreen","orange","purple"), c(1,0.8, 0.3)), 
            ggtheme = theme_survminer(),

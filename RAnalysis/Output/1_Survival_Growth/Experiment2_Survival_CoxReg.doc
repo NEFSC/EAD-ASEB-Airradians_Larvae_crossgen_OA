@@ -1,0 +1,11 @@
+Call:
+coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2 + (1 | Tank), 
+    data = binary_Exp2_larvae)
+
+                             coef exp(coef) se(coef)      z       p
+Larvae_pCO2Moderate pCO2 -0.08592   0.91767  0.01963 -4.377 1.2e-05
+Larvae_pCO2High pCO2      0.46739   1.59583  0.02121 22.036 < 2e-16
+1 | TankTRUE                   NA        NA  0.00000     NA      NA
+
+Likelihood ratio test=655  on 2 df, p=< 2.2e-16
+n= 16145, number of events= 14310 

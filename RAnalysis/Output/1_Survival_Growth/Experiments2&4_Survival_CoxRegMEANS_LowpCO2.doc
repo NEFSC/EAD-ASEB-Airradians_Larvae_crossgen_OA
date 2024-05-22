@@ -1,0 +1,9 @@
+Call:
+coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
+    data = binary_Exp2_Exp4_MEANS_larvaeLOW)
+
+                coef exp(coef) se(coef)      z     p
+Generation2 -0.04029   0.96051  0.07030 -0.573 0.567
+
+Likelihood ratio test=0.33  on 1 df, p=0.5649
+n= 1674, number of events= 1404 

@@ -2,34 +2,53 @@ readme.md
 
 # About:
  This repository contains original data in the project titled "Wild scallop population resilience: Using multigenerational studies to estimate robustness and adaptive potential to rapidly changing ocean acidification".
- Housed in this repository are all larvae data from fertilization to metamorphosis, when aniamls were reared under static larval systems and before moved to flow-through downwellers. 
+ Housed in this repository are all larvae data from fertilization to metamorphosis, when aniamls were reared under static larval systems and before moved to flow-through downwellers.
  We decided upon **four manuscripts** for these data, outlined below:
 
 # Manuscripts (drafting):
 
 ### (1) 'Survival and Growth'
 
-**about**: *How does OA affect scallop survival and growth to metamorphosis?* Contains survival and size data from D-hinge to metamorphosis
+ **about**: *How does OA affect scallop survival and growth to metamorphosis?*
 
-**experiment #s**: 2 and 4
+ **data**
+  - survival
+  - size / growth data from D-hinge to metamorphosis
+
+ **experiment #s**: 2 and 4
 
 ### (2) 'Dstage shell abnormalities'
 
-**about**: *How does OA affect scallops to D-stage? Does parental exposure to OA improve the immediate larval development?* Contains solely the D-hinge abnormality data
+ **about**: *How does OA affect scallops to D-stage? Does parental exposure to OA improve the immediate larval development?*
 
-**experiment #s**: 1, 2 and 4
+ **data**
+  - D-stage abnormality
+
+ **experiment #s**: 1, 2 and 4
 
 ### (3) 'F2 full factorial'
 
-**about**: *How does parental exposure affect early development (embryo to D stage development)?* Contains D-stage abnormalities only 
+ **about**: *How does parental exposure affect early development (embryo to D stage development)?*
 
-**experiment #s**: 3
+ **data**
+  - D-stage abnormality
+  - *Note* we also have respiration rate data here
+
+ **experiment #s**: 3
 
 ### (4) 'F3 full factorial'
 
-**about**: *How does parental exposure affect early development (embryo to D stage development)?* Contains dstage abnormalities, growth and survival, respiration, metamorphosis, and gene expression
+ **about**: *How does parental exposure affect early development (embryo to D stage development)?*
 
-**experiment #s**: 6
+ **data**
+  - survival
+  - size / growth data, both prior to and after metamorphosis
+  - D-stage abnormality
+  - metamorphosis
+  - *Note* we also have respiration rate data here
+  - gene expression *may be included in own manuscript?*
+
+ **experiment #s**: 6
 
 
 # Experiment numbers

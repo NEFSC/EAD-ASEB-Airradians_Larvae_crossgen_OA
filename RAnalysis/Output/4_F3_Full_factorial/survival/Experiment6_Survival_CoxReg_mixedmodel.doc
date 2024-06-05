@@ -1,0 +1,26 @@
+Cox mixed-effects model fit by maximum likelihood
+  Data: binary_Exp6_larvae
+  events, n = 42555, 47678
+  Iterations= 8 34 
+                    NULL Integrated    Fitted
+Log-likelihood -416361.1  -416346.7 -416342.4
+
+                  Chisq    df          p   AIC    BIC
+Integrated loglik 28.75  9.00 7.1493e-04 10.75 -67.18
+ Penalized loglik 37.45 10.88 8.9171e-05 15.69 -78.54
+
+Model:  Surv(Age, Count_dead) ~ pCO2_all + (1 | Tank) 
+Fixed coefficients
+                                     coef exp(coef)   se(coef)     z    p
+pCO2_allLow x Moderate       0.0259311131 1.0262702 0.02240308  1.16 0.25
+pCO2_allLow x High           0.0180964582 1.0182612 0.02256621  0.80 0.42
+pCO2_allModerate x Low       0.0007710605 1.0007714 0.02249248  0.03 0.97
+pCO2_allModerate x Moderate -0.0077663981 0.9922637 0.02242517 -0.35 0.73
+pCO2_allModerate x High      0.0320923126 1.0326128 0.02243924  1.43 0.15
+pCO2_allHigh x Low          -0.0259064689 0.9744262 0.02243051 -1.15 0.25
+pCO2_allHigh x Moderate     -0.0522310451 0.9491096 0.02241907 -2.33 0.02
+pCO2_allHigh x High         -0.0253441580 0.9749743 0.02227480 -1.14 0.26
+
+Random effects
+ Group Variable  Std Dev      Variance    
+ Tank  Intercept 0.0110032076 0.0001210706

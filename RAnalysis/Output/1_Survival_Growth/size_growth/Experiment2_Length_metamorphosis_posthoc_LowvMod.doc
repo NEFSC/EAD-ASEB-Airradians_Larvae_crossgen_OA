@@ -1,0 +1,9 @@
+ Larvae_pCO2   emmean  SE df lower.CL upper.CL .group
+ Moderate pCO2    169 3.6  8      161      178  a    
+ Low pCO2         182 3.6  8      174      191   b   
+
+Confidence level used: 0.95 
+significance level used: alpha = 0.05 
+NOTE: If two or more means share the same grouping symbol,
+      then we cannot show them to be different.
+      But we also did not show them to be the same. 

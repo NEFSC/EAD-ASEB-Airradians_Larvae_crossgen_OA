@@ -34,6 +34,7 @@ library(coxme)
 library(survminer)
 library(ggsurvfit) # survfit2
 library(gtsummary) # tbl_survfit
+
 ```
 
 ### LOAD DATA
@@ -443,20 +444,19 @@ survExp2_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2
 
 
 # convert Age to the proportion of time to metamorphosis 
-binary_Exp2_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp2_larvaeMEANS$Age / 10)
-
+# binary_Exp2_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp2_larvaeMEANS$Age / 10)
 
 
 survExp2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
 survExp2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
 
-
+?survfit2
 ```
 
 ```{r plot Kaplan Meier F1 Experiment #2}
 
-Exp2_larvaeKaplanMeier <- survExp2 %>% 
-                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+Exp2_larvaeKaplanMeier.age <- survExp2 %>% 
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1,type ="survival") +
                         scale_color_manual(values = c("forestgreen","orange","purple")) +
                         scale_fill_manual(values = c("forestgreen","orange","purple")) +
                         labs(
@@ -469,7 +469,12 @@ Exp2_larvaeKaplanMeier <- survExp2 %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
                        # add_pvalue(location  = "annotation", x = 8.5)
 
-Exp2_larvaeKaplanMeier <- survExp2_proptime %>% 
+# plot the surv data
+pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_age.pdf", width=5, height = 4)
+Exp2_larvaeKaplanMeier.age
+dev.off()
+
+Exp2_larvaeKaplanMeier.prop <- survExp2_proptime %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
                         scale_color_manual(values = c("forestgreen","orange","purple")) +
                         scale_fill_manual(values = c("forestgreen","orange","purple")) +
@@ -484,8 +489,8 @@ Exp2_larvaeKaplanMeier <- survExp2_proptime %>%
                        # add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
-pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier.pdf", width=5, height = 4)
-Exp2_larvaeKaplanMeier
+pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_proptime.pdf", width=5, height = 4)
+Exp2_larvaeKaplanMeier.prop
 dev.off()
 
 Exp_10d_surv_prob <- survExp2 %>% 
@@ -519,25 +524,43 @@ library(survminer) # ggforect hazard ratio plot
 #  Experiment 2
 
 # Cox proportional hazards regression model
-Exp2_coxph_test         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvae) 
-Exp2_hazardratio_plot   <- ggforest(Exp2_coxph_test, data = binary_Exp2_larvae)
-Exp2_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvae) %>%  
+Exp2_coxph_test          <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
+                                 data = binary_Exp2_larvaeMEANS)
+Exp2_hazardratio.coxph   <- ggforest(Exp2_coxph_test, data = binary_Exp2_larvaeMEANS)
+
+Exp2_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, 
+                                 data = binary_Exp2_larvae) %>%  
                              tbl_regression(exp = TRUE) 
 
+
+Exp2_coxph_test.frailty         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2 + frailty(ID), 
+                                         data = binary_Exp2_larvae) 
+Exp2_hazardratio.coxp.frailty   <- ggforest(Exp2_coxph_test.frailty, data = binary_Exp2_larvae)
+
+
+
+
 # mixed Cox proportional hazards regression model
+binary_Exp2_larvae$ID <- factor(paste0(
+                              substr(binary_Exp2_larvae$Larvae_pCO2,1,1),
+                              binary_Exp2_larvae$Tank))
+binary_Exp2_larvae    <- droplevels(binary_Exp2_larvae)
+
 Exp2_coxme_test         <- coxme(formula = Surv(Age, Count_dead) ~ Larvae_pCO2 +
-                                   (1 | Tank), data = binary_Exp2_larvae)
+                                   (1 | ID), data = binary_Exp2_larvae)
 Exp2_coxme_test_table   <- coxme(Surv(Age, Count_dead) ~ Larvae_pCO2 + 
-                                   (1 | Tank), data = binary_Exp2_larvae) %>%  
+                                   (1 | ID), data = binary_Exp2_larvae) %>%  
                              tbl_regression(exp = TRUE) 
 # * NOTE cannot make a hazard ratio plot with coxme (not compatible with ggforest) therefore adjust based on this output
 
-
+print(Exp2_coxme_test_table)
 # output yo stuff homie!
-capture.output(Exp2_coxme_test,file="Output/1_Survival_Growth/Experiment2_Survival_CoxReg.doc")
-capture.output(Exp2_coxme_test_table,file="Output/1_Survival_Growth/Experiment2_Survival_CoxReg_HR.doc")
+capture.output(Exp2_coxme_test,
+               file="Output/1_Survival_Growth/survival/Experiment2_Survival_CoxReg.doc")
+capture.output(print(Exp2_coxme_test_table),
+               file="Output/1_Survival_Growth/Experiment2_Survival_CoxReg_HR.txt")
 
-pdf("Output/1_Survival_Growth/Experiment2_HazardRatio.pdf", width = 6, height = 6) # three figures
+pdf("Output/1_Survival_Growth/survival/Experiment2_HazardRatio.pdf", width = 6, height = 6) # three figures
 Exp2_hazardratio_plot
 dev.off()
 
@@ -667,7 +690,7 @@ survExp4_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_
 
 ```{r plot Kaplan Meier F2 Experiment #4}
 
-Exp4_larvaeKaplanMeier <- survExp4 %>% 
+Exp4_larvaeKaplanMeier.age <- survExp4 %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
                         scale_color_manual(values = c("forestgreen","orange","purple")) +
                         scale_fill_manual(values = c("forestgreen","orange","purple")) +
@@ -676,12 +699,17 @@ Exp4_larvaeKaplanMeier <- survExp4 %>%
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
-                        add_risktable() +
-                        add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
                         scale_ggsurvfit(x_scales = list(breaks = 0:14)) #+
                        # add_pvalue(location  = "annotation", x = 8.5)
 
-Exp4_larvaeKaplanMeier <- survExp4_proptime %>% 
+# plot the surv data
+pdf("Output/1_Survival_Growth/survival/Expeirment4_Survival_KaplanMeier.age.pdf", width=5, height = 4)
+Exp4_larvaeKaplanMeier.age
+dev.off()
+
+Exp4_larvaeKaplanMeier.prop <- survExp4_proptime %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
                         scale_color_manual(values = c("forestgreen","orange","purple")) +
                         scale_fill_manual(values = c("forestgreen","orange","purple")) +
@@ -695,8 +723,8 @@ Exp4_larvaeKaplanMeier <- survExp4_proptime %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                        # add_pvalue(location  = "annotation", x = 8.5)
 # plot the surv data
-pdf("Output/1_Survival_Growth/Expeirment4_Survival_KaplanMeier.pdf", width=5, height = 4)
-Exp4_larvaeKaplanMeier
+pdf("Output/1_Survival_Growth/survival/Expeirment4_Survival_KaplanMeier.prop.pdf", width=5, height = 4)
+Exp4_larvaeKaplanMeier.prop
 dev.off()
 
 Exp4_14d_surv_prob <- survExp4 %>% 
@@ -852,7 +880,7 @@ Exp2_Exp4_larvaeKaplanMeier <- s1_2_proptime %>%
                      #   add_pvalue(location  = "annotation", x = 8.5)
 
 # output plot 
-pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier.pdf"),width=8, height=4)
+pdf(paste0("Output/1_Survival_Growth/survival/Experiments2&4_KaplanMeier.pdf"),width=8, height=4)
 print(Exp2_Exp4_larvaeKaplanMeier)
 dev.off()
 
@@ -871,7 +899,7 @@ Exp2_Exp4_larvaeKaplanMeierLOW <- s1_2proptimeLOW %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
 # output plot 
-pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier_LowpCO2.pdf"),width=8, height=4)
+pdf(paste0("Output/1_Survival_Growth/survival/Experiments2&4_KaplanMeier_LowpCO2.pdf"),width=8, height=4)
 print(Exp2_Exp4_larvaeKaplanMeierLOW)
 dev.off()
 
@@ -891,7 +919,7 @@ Exp2_Exp4_larvaeKaplanMeierMOD <- s1_2proptimeMOD %>%
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                      #   add_pvalue(location  = "annotation", x = 8.5)
 # output plot 
-pdf(paste0("Output/1_Survival_Growth/Experiments2&4_KaplanMeier_ModeratepCO2.pdf"),width=8, height=4)
+pdf(paste0("Output/1_Survival_Growth/survival/Experiments2&4_KaplanMeier_ModeratepCO2.pdf"),width=8, height=4)
 print(Exp2_Exp4_larvaeKaplanMeierMOD)
 dev.off()
 
@@ -926,13 +954,13 @@ binary_Exp2_Exp4_all$ID         <- paste0(binary_Exp2_Exp4_all$Tank, # true rand
 Exp2_Exp4_coxph_test       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) 
                                     ~ Gen_pCO2, data = binary_Exp2_Exp4_all)
 Exp2_Exp4_hazardratio_plot <- ggforest(Exp2_Exp4_coxph_test, data = binary_Exp2_Exp4_all)
-Exp2_Exp4_coxph_test_table <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, data = binary_Exp2_Exp4_all) %>%  
+Exp2_Exp4_coxph_test_table <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
+                                    data = binary_Exp2_Exp4_all) %>%  
                                       tbl_regression(exp = TRUE) 
 
 # mixed Cox proportional hazards regression model
-binary_Exp2_Exp4_all$ID <- factor(binary_Exp2_Exp4_all$ID )
+binary_Exp2_Exp4_all$ID2 <- factor(binary_Exp2_Exp4_all$ID)
 binary_Exp2_Exp4_all    <- droplevels(binary_Exp2_Exp4_all)
-
 Exp2_Exp4_coxme_test         <- coxme(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2 +
                                    (1 | ID), data = binary_Exp2_Exp4_all)
 Exp2_Exp4_coxme_test_table   <- coxme(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2 + 
@@ -955,7 +983,8 @@ binary_Exp2_Exp4_larvaeLOW$Generation <- as.character(binary_Exp2_Exp4_larvaeLOW
 binary_Exp2_Exp4_larvaeLOW$ID         <- paste0(binary_Exp2_Exp4_larvaeLOW$Tank, # true random factor for the coxme model
                                           '_',
                                           binary_Exp2_Exp4_larvaeLOW$Generation)
-
+?coxph
+?coxme
 # Cox proportional hazards regression model
 Exp2_Exp4_coxph_testLOW       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
                                        data = binary_Exp2_Exp4_larvaeLOW)
@@ -973,7 +1002,7 @@ Exp2_Exp4_coxme_testLOW         <- coxme(formula = Surv(Prop_time_metamophosis, 
 Exp2_Exp4_coxme_test_tableLOW   <- coxme(Surv(Prop_time_metamophosis, Count_dead) ~ Generation + 
                                    (1 | ID), data = binary_Exp2_Exp4_larvaeLOW) %>%  
                                         tbl_regression(exp = TRUE) 
-
+?coxme
 
 capture.output(Exp2_Exp4_coxph_testLOW,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg_LowpCO2.doc")
 capture.output(Exp2_Exp4_coxme_test_tableLOW,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg_LowpCO2_HR.doc")
@@ -1568,55 +1597,50 @@ dev.off()
 
 # High Parents :::::::::::::::::::::::::::::::
 # referencig high exposure for highi parents 
-binary_Exp6_larvae_HIGH$Larvae_pCO2 <- factor(binary_Exp6_larvae_HIGH$Larvae_pCO2, levels =c('High pCO2', 'Low pCO2', 'Moderate pCO2'))
+binary_Exp6_larvae_HIGH$Larvae_pCO2 <- factor(binary_Exp6_larvae_HIGH$Larvae_pCO2, 
+                                              levels =c('High pCO2', 'Low pCO2', 'Moderate pCO2'))
 
 
 Exp6_coxph_test.high  <- coxph(formula = Surv(Age, Count_dead) ~ # not indcluding the random Tank effect
                                    Larvae_pCO2, 
                                  data = binary_Exp6_larvae_HIGH)
-#                                coef  exp(coef)   se(coef)      z     p
-# Larvae_pCO2Low pCO2      -8.026e-05  9.999e-01  2.041e-02 -0.004 0.997
-# Larvae_pCO2Moderate pCO2 -2.613e-02  9.742e-01  2.040e-02 -1.281 0.200
+#                               coef exp(coef)  se(coef)      z        p
+# Larvae_pCO2Low pCO2      -0.023295  0.976974  0.006953 -3.350 0.000808
+# Larvae_pCO2Moderate pCO2 -0.052559  0.948798  0.006992 -7.517  5.6e-14
 
 binary_Exp6_larvae_HIGH %>%  # same as above, using finalfit to output, includes frailty
     finalfit(dependent_os, explanatory, add_dependent_label = FALSE)
-   #       label        levels         all          HR (univariable)        HR (multivariable)
-   # Larvae_pCO2     High pCO2 5466 (33.6)                         -                         -
-   #                  Low pCO2 5350 (32.9) 1.00 (0.96-1.04, p=0.997) 1.00 (0.96-1.04, p=0.992)
-   #             Moderate pCO2 5439 (33.5) 0.97 (0.94-1.01, p=0.200) 0.97 (0.94-1.01, p=0.201)
+   #       label        levels          all          HR (univariable) HR (multivariable)
+   # Larvae_pCO2     High pCO2 47348 (33.3)                         -                  -
+   #                  Low pCO2 47458 (33.4) 0.98 (0.96-0.99, p=0.001)   NA (NA-NA, p=NA)
+   #             Moderate pCO2 47361 (33.3) 0.95 (0.94-0.96, p<0.001)   NA (NA-NA, p=NA)
 
 Exp6_coxph_test.highmixed    <- coxme(Surv(Age, Count_dead) ~ Larvae_pCO2 + (1 | Tank), data = binary_Exp6_larvae_HIGH)
-#                                   coef exp(coef)   se(coef)     z   p
-# Larvae_pCO2Low pCO2      -8.058636e-05 0.9999194 0.02040624  0.00 1.0
-# Larvae_pCO2Moderate pCO2 -2.612879e-02 0.9742096 0.02039600 -1.28 0.2
-
-Exp6_hazardratio_plot.high   <- ggforest(Exp6_coxph_test.low, data = binary_Exp6_larvae_HIGH)
-Exp6_coxph_test_table.high   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2+(1|Tank), 
-                                 data = binary_Exp6_larvae_HIGH) %>%  tbl_regression(exp = TRUE) 
-
-Exp6_hazardratio_plot.highMIXED <- binary_Exp6_larvae_HIGH %>% 
-                                hr_plot(dependent_os, explanatory)
+#                                 coef exp(coef)   se(coef)     z       p
+# Larvae_pCO2Low pCO2      -0.02325405 0.9770142 0.01167296 -1.99 4.6e-02
+# Larvae_pCO2Moderate pCO2 -0.05252814 0.9488276 0.01169589 -4.49 7.1e-06
 
 Exp6_hazardratio_plot.high   <- ggforest(Exp6_coxph_test.high, data = binary_Exp6_larvae_HIGH)
 
-pdf("Output/4_F3_Full_factorial/survival/Experiment6_HazardRatio_mixed_HIGH.pdf", width = 12, height = 6) # three figures
-ggarrange(Exp6_hazardratio_plot.highMIXED,Exp6_hazardratio_plot.high, ncol=2)
+
+pdf("Output/4_F3_Full_factorial/survival/Experiment6_HazardRatio_mixed_HIGH.pdf", width = 8, height = 6) # three figures
+Exp6_hazardratio_plot.high
 dev.off()
 
 
 
 # output yo stuff homie!
 capture.output(Exp6_coxph_test.mixed,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_mixedmodel.doc")
-capture.output(Exp6_coxph_testMEANS.low,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_means_low.doc")
-capture.output(Exp6_coxph_testMEANS.mod,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_means_mod.doc")
-capture.output(Exp6_coxph_testMEANS.high,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_means_high.doc")
+capture.output(Exp6_coxph_test.lowmixed,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_low.doc")
+capture.output(Exp6_coxph_test.modmixed,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_mod.doc")
+capture.output(Exp6_coxph_test.highmixed,file="Output/4_F3_Full_factorial/survival/Experiment6_Survival_CoxReg_high.doc")
 
 
-pdf("Output/4_F3_Full_factorial/survival/Experiment6_HazardRatio_means.pdf", width = 12, height = 9) # three figures
-ggarrange(Exp6_hazardratio_plotMEANS,
-          (ggarrange(Exp6_hazardratio_plotMEANS.low, 
-                     Exp6_hazardratio_plotMEANS.mod,
-                     Exp6_hazardratio_plotMEANS.high,nrow=3)),
+pdf("Output/4_F3_Full_factorial/survival/Experiment6_HazardRatio_allplots.pdf", width = 15, height = 10) # three figures
+ggarrange(Exp6_hazardratio_plot,
+          (ggarrange(Exp6_hazardratio_plot.low, 
+                     Exp6_hazardratio_plot.mod,
+                     Exp6_hazardratio_plot.high,nrow=3)),
           ncol=2
 )
 dev.off()
@@ -1695,7 +1719,7 @@ ggarrange(Exp6_hazardratio_plotMEANS,
 )
 dev.off()
 
-
+?coxme
 ```
 
 

@@ -1,0 +1,5 @@
+                       Df  Sum Sq      H  p.value
+Larvae_pCO2             1 100.000 4.4444 0.035015
+Generation              1  26.667 1.1852 0.276303
+Larvae_pCO2:Generation  1  52.267 2.3230 0.127477
+Residuals              12 158.567                

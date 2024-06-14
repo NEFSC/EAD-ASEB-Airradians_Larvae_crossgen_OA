@@ -764,21 +764,25 @@ Exp4_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = bin
                              tbl_regression(exp = TRUE) 
 
 # mixed Cox proportional hazards regression model
+binary_Exp4_larvae$ID <- factor(paste0(
+                              substr(binary_Exp4_larvae$Larvae_pCO2,1,1),
+                              binary_Exp4_larvae$Tank))
 binary_Exp4_larvae <- droplevels(binary_Exp4_larvae)
+
 Exp4_coxme_test         <- coxme(formula = Surv(Age, Count_dead) ~ Larvae_pCO2 +
-                                   (1 | Tank_num), data = binary_Exp4_larvae)
+                                   (1 | ID), data = binary_Exp4_larvae)
 Exp4_coxme_test_table   <- coxme(Surv(Age, Count_dead) ~ Larvae_pCO2 + 
-                                   (1 | Tank_num), data = binary_Exp4_larvae) %>%  
+                                   (1 | ID), data = binary_Exp4_larvae) %>%  
                              tbl_regression(exp = TRUE) 
 # * NOTE cannot make a hazard ratio plot with coxme (not compatible with ggforest) therefore adjust based on this output
 
 
 # output yo stuff homie!
-capture.output(Exp4_coxph_test,file="Output/1_Survival_Growth/Experiment4_Survival_CoxReg.doc")
-capture.output(Exp4_coxme_test_table,file="Output/1_Survival_Growth/Experiment4_Survival_CoxReg_HR.doc")
+capture.output(Exp4_coxph_test,file="Output/1_Survival_Growth/survival/Experiment4_Survival_CoxReg.doc")
+capture.output(Exp4_coxme_test_table,file="Output/1_Survival_Growth/survival/Experiment4_Survival_CoxReg_HR.doc")
 
 
-pdf("Output/1_Survival_Growth/Experiment4_HazardRatio.pdf", width = 10, height = 6) # three figures
+pdf("Output/1_Survival_Growth/survival/Experiment4_HazardRatio.pdf", width = 10, height = 6) # three figures
 Exp4_hazardratio_plot
 dev.off()
 
@@ -798,9 +802,9 @@ dev.off()
 ```{r merge Experiments 2 and 4}
 # all - with tank replicate included
 
-binary_Exp2_Exp4_all             <- rbind(binary_Exp2_larvae, 
-                                          (binary_Exp4_larvae %>% dplyr::select(!Tank_num)
-                                           )) %>% 
+binary_Exp2_Exp4_all             <- rbind( (binary_Exp2_larvae %>% dplyr::select(!cluster)),
+                                           (binary_Exp4_larvae %>% dplyr::select(!Tank_num))
+                                           ) %>% 
                                          dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
                                          dplyr::mutate(Prop_time_metamophosis = 
                                                             case_when(Generation == 1 ~ (Age / 10),
@@ -951,29 +955,48 @@ binary_Exp2_Exp4_all$ID         <- paste0(binary_Exp2_Exp4_all$Tank, # true rand
 #  Experiments 2 and 4 compare common treatments with surv at proportion time to metamorphosis
 
 # Cox proportional hazards regression model
-Exp2_Exp4_coxph_test       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) 
+Exp2_Exp4_coxph_test.int  <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) 
                                     ~ Gen_pCO2, data = binary_Exp2_Exp4_all)
-Exp2_Exp4_hazardratio_plot <- ggforest(Exp2_Exp4_coxph_test, data = binary_Exp2_Exp4_all)
-Exp2_Exp4_coxph_test_table <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
+Exp2_Exp4_hazardratio.int <- ggforest(Exp2_Exp4_coxph_test, data = binary_Exp2_Exp4_all)
+Exp2_Exp4_coxph_table.int <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
                                     data = binary_Exp2_Exp4_all) %>%  
                                       tbl_regression(exp = TRUE) 
 
-# mixed Cox proportional hazards regression model
-binary_Exp2_Exp4_all$ID2 <- factor(binary_Exp2_Exp4_all$ID)
-binary_Exp2_Exp4_all    <- droplevels(binary_Exp2_Exp4_all)
+
+Exp2_Exp4_coxph_test.add  <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) 
+                                    ~ Generation + Larvae_pCO2, data = binary_Exp2_Exp4_all)
+Exp2_Exp4_hazardratio.add <- ggforest(Exp2_Exp4_coxph_test.add, data = binary_Exp2_Exp4_all)
+Exp2_Exp4_coxph_table.add <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ 
+                                     Generation + Larvae_pCO2, 
+                                    data = binary_Exp2_Exp4_all) %>%  
+                                      tbl_regression(exp = TRUE) 
+
+pdf("Output/1_Survival_Growth/Experiments2&4_HazardRatio.pdf", width = 10, height = 6) # three figures
+ggarrange(Exp2_Exp4_hazardratio.int, Exp2_Exp4_hazardratio.add, ncol=2)
+dev.off()
+
+# MIXED COX PROPRTION HAZARDS MODEL 
+
+# interaction
+binary_Exp2_Exp4_all$ID <- factor(binary_Exp2_Exp4_all$ID)
+binary_Exp2_Exp4_all     <- droplevels(binary_Exp2_Exp4_all)
 Exp2_Exp4_coxme_test         <- coxme(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2 +
                                    (1 | ID), data = binary_Exp2_Exp4_all)
 Exp2_Exp4_coxme_test_table   <- coxme(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2 + 
                                    (1 | ID), data = binary_Exp2_Exp4_all) %>%  
                              tbl_regression(exp = TRUE) 
 
+#additive mixed
+Exp2_Exp4_coxme_all.add         <- coxme(formula = Surv(Prop_time_metamophosis, Count_dead) ~ 
+                                           Generation + Larvae_pCO2 + (1 | ID), 
+                                         data = binary_Exp2_Exp4_all)
+Exp2_Exp4_coxme_all_table.add  <- coxme(formula = Surv(Prop_time_metamophosis, Count_dead) ~ 
+                                           Generation + Larvae_pCO2 + (1 | ID), 
+                                         data = binary_Exp2_Exp4_all) %>%  
+                                        tbl_regression(exp = TRUE) 
 
 capture.output(Exp2_Exp4_coxme_test,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg.doc")
 capture.output(Exp2_Exp4_coxme_test_table,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg_HR.doc")
-
-pdf("Output/1_Survival_Growth/Experiments2&4_HazardRatio.pdf", width = 10, height = 3) # three figures
-print(Exp2_Exp4_hazardratio_plot)
-dev.off()
 
 
 
@@ -1037,11 +1060,14 @@ Exp2_Exp4_coxph_test_tableMOD <- coxph(Surv(Prop_time_metamophosis, Count_dead) 
 binary_Exp2_Exp4_larvaeMOD$ID   <- factor(binary_Exp2_Exp4_larvaeMOD$ID )
 binary_Exp2_Exp4_larvaeMOD      <- droplevels(binary_Exp2_Exp4_larvaeMOD)
 
+#interaction mixed
 Exp2_Exp4_coxme_testMOD         <- coxme(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation +
                                    (1 | ID), data = binary_Exp2_Exp4_larvaeMOD)
 Exp2_Exp4_coxme_test_tableMOD   <- coxme(Surv(Prop_time_metamophosis, Count_dead) ~ Generation + 
                                    (1 | ID), data = binary_Exp2_Exp4_larvaeMOD) %>%  
                                         tbl_regression(exp = TRUE) 
+
+
 
 
 capture.output(Exp2_Exp4_coxph_testMOD,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg_ModeratepCO2.doc")
@@ -1057,10 +1083,233 @@ dev.off()
 
 
 
+### Experiment 2 and 4 PRE AND POST METAMORPHOSIS 
+
+**Objective**: We know that the post-metamorphic oyster dropped off dramatically after 
+under the moderate treament (and there werent any under high!) However our reuslts alone for 
+ore metamorhpisis (in chunks above) would otherwise present that moderate is beneficial. 
+We must present these data post-metamorphosis.
+
+* Below are chunks for the **delta(pre) versus delta(post)** addressed statistically as 
+one-way anova models (fixed effect of treatment) separately for pre and post
+
+
+* Note: we inly need the percent survival data for this, no counts or binary live dead!
+
+* *How does this work since we have offset time to metamorphosis?*
+  - Use equal time pre and equal time post to run the models, meaning...
+  If F1 metamorphosed at 10 dpf, the percent survival at 6 days (pre) and 14 days (post) 
+  represents a comparable dataset to days 10 (pre) and 18 (post) for F2s that metamorphosed at 
+  14 dpf. In this example, we investigate the +-4 days frommetamormophosis 
+  
+```{r Pre v. Post: data set up and sanity checks}
+
+# Experiment 2 (F1s) metamorphosed at 10 DPF
+Exp2_PrePost <- df %>% 
+                        filter(Generation=="1" & Larvae_pCO2 %in% c('Low pCO2', 'Moderate pCO2')) %>%
+                        dplyr::mutate(Experiment = 2)
+sort(unique(Exp2_PrePost$Age)) # 2  4  8 10 14 18
+
+# Day 4 == 6 days pre
+# Day 18 == 8 days post
+
+Exp2_Pre.calc <- Exp2_PrePost %>% 
+                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::filter(Age %in% c(4, 10)) %>% 
+                      tidyr::pivot_wider(names_from = Age, 
+                                         values_from = proportion,
+                                         names_glue = "Age_{.name}") %>% # renmae new cols
+                      dplyr::mutate(type       = "pre", # new col fo rpre
+                                    delta.perc = Age_10 - Age_4) %>%  # sutract em
+                      dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
+                                                           .default = delta.perc),
+                                    abs.delta.perc = abs(delta.perc)) %>% # now take the absolute value
+                      na.omit() %>% 
+                      dplyr::select(-c(Age_10,Age_4)) # no longer need these, remove to merge with post
+  
+
+Exp2_Post.calc <- Exp2_PrePost %>% 
+                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::filter(Age %in% c(10, 18)) %>% 
+                      tidyr::pivot_wider(names_from = Age, 
+                                         values_from = proportion,
+                                         names_glue = "Age_{.name}") %>% # renmae new cols
+                      dplyr::mutate(type       = "post", # new col fo rpre
+                                    delta.perc = Age_18 - Age_10) %>%  # sutract em
+                      dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
+                                                           .default = delta.perc),
+                                    abs.delta.perc = abs(delta.perc))%>% # now take the absolute value
+                      na.omit() %>% 
+                      dplyr::select(-c(Age_18,Age_10)) # no longer need these, remove to merge with post
+
+
+Exp2_PrePost.calc <- rbind(Exp2_Pre.calc,Exp2_Post.calc)
 
 
 
-## Manuscript 4; Expeirment 6
+
+
+
+
+# Experiment 4 (F2s) metamorphosed at 14 DPF
+Exp4_PrePost <- df %>% filter(Generation=="2") %>% dplyr::mutate(Experiment = 4)
+sort(unique(Exp4_PrePost$Age)) # 2  6  8 10 14 21
+
+# Day 8  == 6 days pre
+# Day 21 == 8 days post
+
+Exp4_Pre.calc <- Exp4_PrePost %>% 
+                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2, Generation)) %>% 
+                      dplyr::filter(Age %in% c(8, 14)) %>% 
+                      tidyr::pivot_wider(names_from = Age, 
+                                         values_from = proportion,
+                                         names_glue = "Age_{.name}") %>% # renmae new cols
+                      dplyr::mutate(type       = "pre", # new col fo rpre
+                                    delta.perc = Age_14 - Age_8) %>%  # sutract em
+                      dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
+                                                           .default = delta.perc),
+                                    abs.delta.perc = abs(delta.perc)) %>% # now take the absolute value
+                      na.omit() %>% 
+                      dplyr::select(-c(Age_8,Age_14)) # no longer need these, remove to merge with post
+  
+
+Exp4_Post.calc <- Exp4_PrePost %>% 
+                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::filter(Age %in% c(14, 21)) %>% 
+                      tidyr::pivot_wider(names_from = Age, 
+                                         values_from = proportion,
+                                         names_glue = "Age_{.name}") %>% # renmae new cols
+                      dplyr::mutate(type       = "post", # new col fo rpre
+                                    delta.perc = Age_21 - Age_14) %>%  # sutract em
+                      dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
+                                                           .default = delta.perc),
+                                    abs.delta.perc = abs(delta.perc))%>% # now take the absolute value
+                      na.omit() %>% 
+                      dplyr::select(-c(Age_14,Age_21)) # no longer need these, remove to merge with post
+
+
+Exp4_PrePost.calc <- rbind(Exp4_Pre.calc,Exp4_Post.calc)
+``` 
+
+
+```{r Statistics for Pre and Post each Two-way anovas}
+# load packages 
+library(rcompanion)
+library(FSA)
+
+# merge datasets and assign gneration as a factor for the models
+Exp2Exp4_PrePost.master            <- rbind(Exp2_PrePost.calc,Exp4_PrePost.calc)
+Exp2Exp4_PrePost.master$Generation <- factor(Exp2Exp4_PrePost.master$Generation)
+
+
+# delta pre - test the effects of larvae pCO2 and generation
+TwoWay.Pre <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
+                     data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'pre'))
+                  ))
+shapiro.test(resid(TwoWay.Pre)) # 0.6349 - pass
+leveneTest(TwoWay.Pre) # 0.7313 - pass
+summary(TwoWay.Pre)
+
+#                         Df  Sum Sq  Mean Sq F value Pr(>F)  
+# Larvae_pCO2             1 0.00181 0.001806   0.563 0.4676  
+# Generation              1 0.01276 0.012760   3.977 0.0694 .
+# Larvae_pCO2:Generation  1 0.00077 0.000770   0.240 0.6330  
+# Residuals              12 0.03851 0.00320
+
+
+
+# delta post - test the effects of larvae pCO2 and generation
+TwoWay.Post <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
+                     data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post'))
+                  ))
+shapiro.test(resid(TwoWay.Post)) # 0.03677 - non-normal
+leveneTest(TwoWay.Post) # 0.2298 - pass
+# * run non-parametric
+SRH.Post <- scheirerRayHare(abs.delta.perc ~ Larvae_pCO2 * Generation, 
+                     data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post')))
+#                        Df  Sum Sq      H  p.value
+# Larvae_pCO2             1 100.000 4.4444 0.035015 **
+# Generation              1  26.667 1.1852 0.276303
+# Larvae_pCO2:Generation  1  52.267 2.3230 0.127477
+# Residuals              12 158.567 
+# posthoc dunn test for main effect of arvae pCO2
+
+```
+
+```{r Plots for Pre and Post}
+
+Exp2Exp4_PrePost.master  %>% 
+  ggplot(aes(y=abs.delta.perc, x = Larvae_pCO2)) +
+  geom_bar() + 
+  facet_wrap(~Generation)
+
+Exp2Exp4_PrePost.summ <- Exp2Exp4_PrePost.master %>% 
+                          dplyr::select(Generation,type,Larvae_pCO2,abs.delta.perc) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Generation,Larvae_pCO2,type) %>% 
+                          dplyr::summarise(mean_delta.perc = mean(abs.delta.perc), 
+                                           n           = n(),
+                                           sd_delta.perc   = sd(abs.delta.perc),
+                                           se_delta.perc   = sd_delta.perc/(sqrt(n)))
+
+Exp2Exp4_PrePost.summ$type = factor(Exp2Exp4_PrePost.summ$type, levels =c("pre","post"))
+
+DeltaPercent_barplot <- ggplot(Exp2Exp4_PrePost.summ) +
+                          geom_errorbar(aes(x=Larvae_pCO2, 
+                                             ymin=mean_delta.perc-se_delta.perc, 
+                                             ymax=mean_delta.perc+se_delta.perc,
+                                             group=Generation,
+                                             fill=Larvae_pCO2), 
+                                        position=position_dodge(.9),
+                                        width=0, # removes the horizontal line
+                                        colour="black",
+                                        size=1) +
+                          geom_bar(aes(x=Larvae_pCO2, 
+                                       y=mean_delta.perc,
+                                       fill=factor(Larvae_pCO2),
+                                       group=Generation),
+                                   position=position_dodge(.9),
+                                   stat="identity",
+                                   width = 0.75,
+                                   alpha = 0.5) +
+                          labs(title="Survival difference Pre/Post metamorphosis", 
+                              x ="pCO2 Exposure", 
+                              y = "Delta(abs(percent))") +
+                           scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                               values=c("forestgreen","orange")) +
+                          scale_x_discrete(labels=c("L", "M")) +
+                          # scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                          theme_classic() +
+                          theme(panel.grid.major = element_blank(), 
+                                panel.grid.minor = element_blank(), 
+                                axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                                axis.text=element_text(size=10),
+                                legend.position="none") +
+                          facet_wrap(~type)
+
+
+capture.output(summary(TwoWay.Pre), file="Output/1_Survival_Growth/survival/Pre_Metamorphosis_TwoWayANOVA.doc")
+capture.output(SRH.Post, file="Output/1_Survival_Growth/survival/Post_Metamorphosis_SRH.doc")
+
+pdf("Output/1_Survival_Growth/survival/PrePost_Metamorphosis.pdf",width = 4, height = 4)
+DeltaPercent_barplot
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Manuscript 4; Experiment 6
 
 **output folder** = '4_F3_Full_factorial'
 
@@ -1509,7 +1758,6 @@ Exp6_hazardratio_plot
 dev.off()
 
 ```
-
 
 ```{r cox & hazard ratio -  F3 Experiment #6 - by parental LOW mixed model}
 

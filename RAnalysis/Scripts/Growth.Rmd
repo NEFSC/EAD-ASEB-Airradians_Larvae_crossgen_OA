@@ -6,13 +6,14 @@ output: html_document
 ---
 
 # 20231217 - started manuscript Github repostiory 'EAD-ASEB-Airradians_Larvae_crossgen_OA'
+# 20240616 - RM anova chunks
 # SGurr edits
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 
@@ -28,6 +29,7 @@ library(kableExtra) # nice Rmd tables install.packages('kableExtra')
 library(emmeans)
 library(ggpubr)
 library(Rmisc)
+library(rstatix)
 ```
 
 
@@ -124,6 +126,11 @@ Exp4 <- GrowthData %>%
 
 ## Manuscript 1; Expeirments 2 and 4
 
+* length plots 
+
+* specific growth plots - *note* we see here that the speciic growth is wonky (changes with time)
+let's just go with size over time for our data report (as discussed with lead PI team on 6/2024)
+
 **output folder** = '1_Survival_Growth'
 
 ```{r  Mean table + plots; F1 Experiment #2}
@@ -133,7 +140,7 @@ Exp2_summ.length <- summarySE(Exp2, measurevar="Length", groupvars=c("Age", "Lar
 
 Exp2_MeanSE.length <- ggplot(Exp2_summ.length, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_line()+
                       geom_point()+ 
-                       geom_errorbar(aes(ymin=Length-se, ymax=Length+se), width=.2,
+                      geom_errorbar(aes(ymin=Length-se, ymax=Length+se), width=.2,
                                     position=position_dodge(.1)) +
                       scale_color_manual(values=c("green4", "darkorange1", "purple"))+
                       theme(legend.position="right", 
@@ -154,6 +161,7 @@ Exp2_MeanSE.length <- ggplot(Exp2_summ.length, aes(x=Age, y=Length, color=Larvae
                             legend.position="none")
 
 print(Exp2_MeanSE.length)
+
 
 # output yo stuff homie!
 pdf("Output/1_Survival_Growth/size_growth/Experiment2_Mean_Length.pdf", width = 4, height = 4)
@@ -213,8 +221,8 @@ Exp4_MeanSE <- ggplot(Exp4_summ, aes(x=Age, y=Length, color=Larvae_pCO2))+ geom_
                       labs(title = "Exp #4", 
                            x="Age (days)", 
                            y="Shell Length (μm)") + 
-                      scale_x_continuous(breaks = seq(0, 40, by = 4)) +
-                      scale_y_continuous(limits=c(60,410))+
+                      scale_x_continuous(breaks = seq(0, 20, by = 2)) +
+                      scale_y_continuous(limits=c(60,210))+
                       theme_classic() +
                       theme(panel.grid.major = element_blank(), 
                             panel.grid.minor = element_blank(), 
@@ -271,7 +279,7 @@ dev.off()
 
 # Statistics
 
-## Manuscript 1; Expeirments 2 and 4
+## Manuscript 1; Experiments 2 and 4
 
 
 **Objective:** Run two tests (discussed as team 6/4/2024)
@@ -279,6 +287,9 @@ NOTE: we can report differencesin time and size at metamorphosis but *we can not
 differences in diet betwen generations. *therefore we can only address the effects of pCO2 WITHIN generations*
 
   - (1) Repeated measures ANOVA
+    
+    - F1 for experiment #2 
+    - F2 for experiment #4
   
   - (2) Size at metamorphosis 
     
@@ -292,47 +303,44 @@ differences in diet betwen generations. *therefore we can only address the effec
 
 
 # (2.1) All treatment Low, moderate, and high
-Exp2_RMAnova <-  Exp2 %>%
-                    dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
-                    convert_as_factor(ID, Age, Larvae_pCO2) %>% 
-                    na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+Exp2_RMAnova    <-  Exp2 %>%
+                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
-# * summary stats
-Exp2_RMAnova %>%  group_by(Age,Larvae_pCO2) %>% get_summary_stats(Length, type = "mean_sd")
-# mean and standard deviation
-# Low pCO2	4	spGR	5	0.054	0.005
-# Moderate pCO2	4	spGR	4	0.045	0.007
-# High pCO2	4	spGR	4	0.047	0.038
-# Low pCO2	8	spGR	5	0.105	0.016
-# Moderate pCO2	8	spGR	4	0.110	0.006
-# High pCO2	8	spGR	4	0.060	0.048
-# Low pCO2	10	spGR	5	0.053	0.026
-# Moderate pCO2	10	spGR	5	0.035	0.007
-# High pCO2	10	spGR	5	0.027	0.070
-ggqqplot(Exp2_RMAnova, "Length", ggtheme = theme_bw()) +
-  facet_grid(Age ~ Larvae_pCO2, labeller = "label_both")
+Exp2_RMAnova$ID <- factor(Exp2_RMAnova$ID)
+
+
+
+# * summary stats, QQ
+MeanSE_RM.Exp2 <- Exp2_RMAnova %>%  group_by(Age,Larvae_pCO2) %>% get_summary_stats(Length, type = "mean_sd")
+qqplot_RM.Exp2 <- ggqqplot(Exp2_RMAnova, "Length", ggtheme = theme_bw()) +
+                          facet_grid(Age ~ Larvae_pCO2, labeller = "label_both")
 
 # * normality assumption of the data
-Exp2_RMAnova %>%  group_by(Age, Larvae_pCO2) %>% shapiro_test(Length)
-# Low pCO2	4	spGR	0.8008857	0.08239093
-# Moderate pCO2	4	spGR	0.8485095	0.22136964
-# High pCO2	4	spGR	0.9366072	0.63375089
-# Low pCO2	8	spGR	0.8837264	0.32653983
-# Moderate pCO2	8	spGR	0.8259370	0.15745280
-# High pCO2	8	spGR	0.9677061	0.82723105
-# Low pCO2	10	spGR	0.9460182	0.70873517
-# Moderate pCO2	10	spGR	0.9206824	0.53435159
-# High pCO2	10	spGR	0.9843164	0.95630189
+Shapiro_RM.Exp2 <- Exp2_RMAnova %>%  group_by(Age, Larvae_pCO2) %>% shapiro_test(Length)
 
-# * visualization
-bxp <- ggboxplot(
+# * visualization as boxplots
+bxp_RM.Exp2 <- ggboxplot(
                 Exp2_RMAnova, x = "Age", y = "Length",
                 color = "Larvae_pCO2", palette = "jco"
                 )
 # * identify outliers 
-Exp2_RMAnova %>%
-  group_by(Larvae_pCO2, Age) %>%
-  identify_outliers(Length)
+outliers_RM.Exp2 <- Exp2_RMAnova %>%
+                      group_by(Larvae_pCO2, Age) %>%
+                      identify_outliers(Length)
+
+# output all of that..
+capture.output(MeanSE_RM.Exp2,file="Output/1_Survival_Growth/size_growth/Experiment2_Length_MeanSE.doc")
+capture.output(Shapiro_RM.Exp2,file="Output/1_Survival_Growth/size_growth/Experiment2_Length_ShapiroWilk.doc")
+capture.output(outliers_RM.Exp2,file="Output/1_Survival_Growth/size_growth/Experiment2_Length_Outliers.doc")
+pdf("Output/1_Survival_Growth/size_growth/Experiment2_Length_Outliers.doc", width =4, height = 10)
+qqplot_RM.Exp2
+dev.off()
+pdf("Output/1_Survival_Growth/size_growth/Experiment2_Length_boxplot.doc", width =4, height = 10)
+bxp_RM.Exp2
+dev.off()
+
 
 # Run statistical model 
 df_Exp2_res.aov <- anova_test(data = Exp2_RMAnova, 
@@ -343,8 +351,52 @@ get_anova_table(df_Exp2_res.aov)
 # 2             Age 1.44 14.36 220.110 7.52e-11     * 0.933
 # 3 Larvae_pCO2:Age 2.87 14.36  10.723 6.45e-04     * 0.574
 
+
+# Effect of treatment at each time point
+# this sees at which time points there is an effect 
+Exp2_RMAnova$Length <- as.numeric(Exp2_RMAnova$Length)
+Exp2_RMAnova <- ungroup(Exp2_RMAnova)
+one.way <- Exp2_RMAnova %>%
+  dplyr::filter(!(ID %in% c(1, 6,15))) %>% 
+  group_by(Age) %>%
+  anova_test(dv = Length, wid = ID, within = Larvae_pCO2) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way
+
+# Pairwise comparisons between treatment groups
+# this is alike a posthoc t text within time point
+pwc <- Exp2_RMAnova %>%
+  dplyr::filter(!(ID %in% c(1, 6,15))) %>% 
+  group_by(Age) %>%
+  pairwise_t_test(
+    Length ~ Larvae_pCO2, paired = TRUE,
+    p.adjust.method = "bonferroni"
+    )
+pwc
+
+```
+
+
+```{r}
+
+posthoc.Age <- rstatix::tukey_hsd(x = Exp2_RMAnova, formula = Length ~ Age)
+# 1	Age	2	4	0	9.161538	-19.23428	37.55735	8.27e-01	ns
+# 2	Age	2	8	0	51.994718	24.56176	79.42768	3.60e-05	****
+# 3	Age	2	10	0	64.117385	36.68442	91.55035	5.43e-07	****
+# 4	Age	4	8	0	42.833179	15.40022	70.26614	7.09e-04	***
+# 5	Age	4	10	0	54.955846	27.52288	82.38881	1.32e-05	****
+# 6	Age	8	10	0	12.122667	-14.31240	38.55773	6.19e-01	ns
+
+posthoc.pCO2 <- rstatix::tukey_hsd(x = Exp2_RMAnova, formula = Length ~ Larvae_pCO2) 
+# 1	Larvae_pCO2	Low pCO2	Moderate pCO2	0	-2.918444	-27.70676	21.86987	9.57e-01	ns
+# 2	Larvae_pCO2	Low pCO2	High pCO2	0	-48.418444	-73.20676	-23.63013	5.37e-05	****
+# 3	Larvae_pCO2	Moderate pCO2	High pCO2	0	-45.500000	-70.93227	-20.06773	2.05e-04	***
+
 posthoc <- rstatix::tukey_hsd(x = Exp2_RMAnova, formula = Length ~ Age*Larvae_pCO2) %>% 
   dplyr::filter(term %in% 'Age:Larvae_pCO2')
+
+
 
 # write output tables and posthoc
 capture.output(get_anova_table(df_Exp2_res.aov),
@@ -353,6 +405,18 @@ capture.output(posthoc,
                file="Output/1_Survival_Growth/size_growth/Experiment2_Length_RManova_posthoc.doc")
 
 
+RM.aov <- rstatix::anova_test(data = Exp2_RMAnova, 
+                        dv = Length, 
+                        wid = ID, 
+                        within = c(Larvae_pCO2, Age),
+                        type=1)
+RM.aov
+#            Effect DFn DFd       F        p p<.05   ges
+# 1     Larvae_pCO2   2  10 117.735 1.12e-07     * 0.890
+# 2             Age   1  10   1.904 1.98e-01       0.062
+# 3             Age   3  32 218.495 2.19e-21     * 0.931
+# 4 Larvae_pCO2:Age   1  10   3.525 9.00e-02       0.108
+# 5 Larvae_pCO2:Age   6  32  10.416 2.13e-06     * 0.561
 
 
 

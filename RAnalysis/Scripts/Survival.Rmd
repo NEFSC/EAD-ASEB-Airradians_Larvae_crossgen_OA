@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
- knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 #knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
@@ -39,28 +39,34 @@ library(gtsummary) # tbl_survfit
 
 ### LOAD DATA
 ```{r, echo=FALSE}
-df <- read.csv("Data/larval_survival.csv", header = T) %>% 
-  dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival)) %>% 
-  # dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
-  
-  # rename the variables for consistency using 'case_when'
-  dplyr::mutate(Parental_OA = case_when(Parental_OA ==  "LOW" ~ "Low pCO2", 
-                                        Parental_OA ==  "MODERATE" ~ "Moderate pCO2", 
-                                        Parental_OA ==  "HIGH" ~ "High pCO2",
-                                        Parental_OA ==  "WILD" ~ "None")) %>% 
-  dplyr::mutate(Exposure_OA = case_when(Exposure_OA ==  "LOW" ~ "Low pCO2", 
-                                        Exposure_OA ==  "MODERATE" ~ "Moderate pCO2", 
-                                        Exposure_OA ==  "HIGH" ~ "High pCO2")) %>% 
-  
-  # change the levels for order when plotting - call as factors too!
-  dplyr::mutate(Parental_OA = as.factor(forcats::fct_relevel(Parental_OA, 
-                                                             c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
-  dplyr::mutate(Exposure_OA = as.factor(forcats::fct_relevel(Exposure_OA, 
-                                                             c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
-  
-  # rename them
-  dplyr::rename(Parent_pCO2 = Parental_OA) %>% 
-  dplyr::rename(Larvae_pCO2  = Exposure_OA) # done 
+
+# note: we have percent_survival_rel_embryo and Percent_Survival_rel_Dstage 
+# experiment #4 does not have percent relative to embryo, but is percent rel to d hinge stage so we will use that 
+# the survival at Dstage as abnormality data can be used for the inital assessment 
+
+df<- read.csv("Data/larval_survival.csv", header = T) %>% 
+                  dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival_rel_dstage,
+                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_embryos))) %>% 
+                  # dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
+                  
+                  # rename the variables for consistency using 'case_when'
+                  dplyr::mutate(Parental_OA = case_when(Parental_OA ==  "LOW" ~ "Low pCO2", 
+                                                        Parental_OA ==  "MODERATE" ~ "Moderate pCO2", 
+                                                        Parental_OA ==  "HIGH" ~ "High pCO2",
+                                                        Parental_OA ==  "WILD" ~ "None")) %>% 
+                  dplyr::mutate(Exposure_OA = case_when(Exposure_OA ==  "LOW" ~ "Low pCO2", 
+                                                        Exposure_OA ==  "MODERATE" ~ "Moderate pCO2", 
+                                                        Exposure_OA ==  "HIGH" ~ "High pCO2")) %>% 
+                  
+                  # change the levels for order when plotting - call as factors too!
+                  dplyr::mutate(Parental_OA = as.factor(forcats::fct_relevel(Parental_OA, 
+                                                                             c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
+                  dplyr::mutate(Exposure_OA = as.factor(forcats::fct_relevel(Exposure_OA, 
+                                                                             c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
+                  
+                  # rename them
+                  dplyr::rename(Parent_pCO2 = Parental_OA) %>% 
+                  dplyr::rename(Larvae_pCO2  = Exposure_OA) # done 
   
   
 df$Percent_Survival_trans <- asin(sqrt(df$Percent_Survival))
@@ -134,6 +140,12 @@ larval survival comapred across gnerations should only show < 10 dpf survival
 stL_Exp2 <- summarySE(df_Exp2, measurevar="Percent_Survival", groupvars=c("Age", "Larvae_pCO2"))
 stL_Exp2 %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
 
+
+# plot relative to stocking density aas embryos 
+
+
+
+# plot relative to 100$% restart at D stage 
 Exp2_PlotMeanSE <-  ggplot(stL_Exp2, aes(x=Age, y=Percent_Survival, color=Larvae_pCO2)) + geom_line()+
                           geom_point()+ 
                            geom_errorbar(aes(ymin=Percent_Survival-se, 
@@ -359,11 +371,11 @@ df_Exp2 <- df_Exp2 %>%
 binary_Exp2_all     <- data.frame() # start dataframe  - all
 # run it 
 for (i in 1:nrow(df_Exp2)) {
-   count_alive <- round(df_Exp2[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp2[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
+   #count_alive <- round(df_Exp2[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
+   #count_dead  <- round(df_Exp2[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
    
-   #count_alive <- round(df_Exp2[i,]$Count_alive) # raw counts
-   #count_dead  <- round(df_Exp2[i,]$Count_dead)  # raw counts
+   count_alive <- round(df_Exp2[i,]$Count_alive) # raw counts
+   count_dead  <- round(df_Exp2[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
@@ -406,8 +418,12 @@ binary_Exp2_MEANS       <- data.frame() # start dataframe
 
 # run it 
 for (i in 1:nrow(df_Exp2_MEANS)) {
-   count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
+   #count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
+   #count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
+
+   count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead)  # divide all counts by 1000, round to nearest
+   
    
    loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
@@ -427,14 +443,21 @@ binary_Exp2_MEANS <- binary_Exp2_MEANS %>%
                       dplyr::mutate(Generation = 1) %>% 
                       na.omit()
 
+# test whether 0s and 1s do pan out to the count dead and alive
+# length((binary_Exp2_all %>% dplyr::filter(c(Tank %in% '1' & Age == 4 & Larvae_pCO2 %in% 'Low pCO2' & Count_dead == 1)))$Count_dead)
+# length((binary_Exp2_all %>% dplyr::filter(c(Tank %in% '1' & Age == 4 & Larvae_pCO2 %in% 'Low pCO2' & Count_dead == 0)))$Count_dead)
+# # 58667 # the coutn alive 
+# #32583 # eaxactly right, we counted dead == 1 and alive == 0
+
 ```
 
 **note**: larval period ended at first sign of metamorphossi at 10 DPF  - truncate before this age to compare
 ```{r filter larval period F1 Experiment #2}
 
-binary_Exp2_larvae      <- binary_Exp2_all %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-
-binary_Exp2_larvaeMEANS <- binary_Exp2_MEANS %>% filter(Age <=10) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+binary_Exp2_larvae      <- binary_Exp2_all %>% filter(Age <=10) %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+                                        dplyr::mutate(Prop_time_metamophosis = Age/10)
+binary_Exp2_larvaeMEANS <- binary_Exp2_MEANS %>% filter(Age <=10)  %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+                                        dplyr::mutate(Prop_time_metamophosis = Age/10)
 
 ```
 
@@ -561,7 +584,7 @@ capture.output(print(Exp2_coxme_test_table),
                file="Output/1_Survival_Growth/Experiment2_Survival_CoxReg_HR.txt")
 
 pdf("Output/1_Survival_Growth/survival/Experiment2_HazardRatio.pdf", width = 6, height = 6) # three figures
-Exp2_hazardratio_plot
+Exp2_hazardratio.coxph
 dev.off()
 
 ```
@@ -596,11 +619,11 @@ df_Exp4 <- df_Exp4 %>%
 binary_Exp4_all     <- data.frame() # start dataframe  - all
 # run it 
 for (i in 1:nrow(df_Exp4)) {
-   count_alive <- round(df_Exp4[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp4[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
+   #count_alive <- round(df_Exp4[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
+   #count_dead  <- round(df_Exp4[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
    
-   #count_alive <- round(df_Exp4[i,]$Count_alive) # raw counts
-   #count_dead  <- round(df_Exp4[i,]$Count_dead)  # raw counts
+   count_alive <- round(df_Exp4[i,]$Count_alive) # raw counts
+   count_dead  <- round(df_Exp4[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
@@ -645,8 +668,12 @@ binary_Exp4_MEANS       <- data.frame() # start dataframe
 
 # run it 
 for (i in 1:nrow(df_Exp4_MEANS)) {
-   count_alive <- round(df_Exp4_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp4_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
+   #count_alive <- round(df_Exp4_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
+   #count_dead  <- round(df_Exp4_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
+   
+   count_alive <- round(df_Exp4_MEANS[i,]$mean_Count_alive) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp4_MEANS[i,]$mean_Count_dead)  # divide all counts by 1000, round to nearest
+   
    
    loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Larvae_pCO2','Age','Count_dead'))
@@ -671,10 +698,10 @@ binary_Exp4_MEANS <- binary_Exp4_MEANS %>%
 **note**: larval period ended at first sign of metamorphosis at 14 DPF  - truncate before this age to compare
 ```{r filter larval period F2 Experiment #4}
 
-binary_Exp4_larvae      <- binary_Exp4_all %>% filter(Age <=14) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-
-binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-
+binary_Exp4_larvae      <- binary_Exp4_all %>% filter(Age <=14) %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+                            dplyr::mutate(Prop_time_metamophosis = Age/14)
+binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
+                            dplyr::mutate(Prop_time_metamophosis = Age/14)
 ```
 
 ```{r surv object F2 Experiment #4}
@@ -802,8 +829,8 @@ dev.off()
 ```{r merge Experiments 2 and 4}
 # all - with tank replicate included
 
-binary_Exp2_Exp4_all             <- rbind( (binary_Exp2_larvae %>% dplyr::select(!cluster)),
-                                           (binary_Exp4_larvae %>% dplyr::select(!Tank_num))
+binary_Exp2_Exp4_all             <- rbind( (binary_Exp2_larvae),# %>% dplyr::select(!cluster)),
+                                           (binary_Exp4_larvae)# %>% dplyr::select(!Tank_num))
                                            ) %>% 
                                          dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
                                          dplyr::mutate(Prop_time_metamophosis = 
@@ -957,7 +984,7 @@ binary_Exp2_Exp4_all$ID         <- paste0(binary_Exp2_Exp4_all$Tank, # true rand
 # Cox proportional hazards regression model
 Exp2_Exp4_coxph_test.int  <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) 
                                     ~ Gen_pCO2, data = binary_Exp2_Exp4_all)
-Exp2_Exp4_hazardratio.int <- ggforest(Exp2_Exp4_coxph_test, data = binary_Exp2_Exp4_all)
+Exp2_Exp4_hazardratio.int <- ggforest(Exp2_Exp4_coxph_test.int, data = binary_Exp2_Exp4_all)
 Exp2_Exp4_coxph_table.int <- coxph(Surv(Prop_time_metamophosis, Count_dead) ~ Gen_pCO2, 
                                     data = binary_Exp2_Exp4_all) %>%  
                                       tbl_regression(exp = TRUE) 
@@ -995,7 +1022,8 @@ Exp2_Exp4_coxme_all_table.add  <- coxme(formula = Surv(Prop_time_metamophosis, C
                                          data = binary_Exp2_Exp4_all) %>%  
                                         tbl_regression(exp = TRUE) 
 
-capture.output(Exp2_Exp4_coxme_test,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg.doc")
+capture.output(Exp2_Exp4_coxme_test,file="Output/1_Survival_Growth/survival/Experiments2&4_Survival_CoxReg_int.doc")
+capture.output(Exp2_Exp4_coxme_all.add,file="Output/1_Survival_Growth/survival/Experiments2&4_Survival_CoxReg_add.doc")
 capture.output(Exp2_Exp4_coxme_test_table,file="Output/1_Survival_Growth/Experiments2&4_Survival_CoxReg_HR.doc")
 
 
@@ -1006,8 +1034,7 @@ binary_Exp2_Exp4_larvaeLOW$Generation <- as.character(binary_Exp2_Exp4_larvaeLOW
 binary_Exp2_Exp4_larvaeLOW$ID         <- paste0(binary_Exp2_Exp4_larvaeLOW$Tank, # true random factor for the coxme model
                                           '_',
                                           binary_Exp2_Exp4_larvaeLOW$Generation)
-?coxph
-?coxme
+
 # Cox proportional hazards regression model
 Exp2_Exp4_coxph_testLOW       <- coxph(formula = Surv(Prop_time_metamophosis, Count_dead) ~ Generation, 
                                        data = binary_Exp2_Exp4_larvaeLOW)
@@ -1114,10 +1141,10 @@ sort(unique(Exp2_PrePost$Age)) # 2  4  8 10 14 18
 # Day 18 == 8 days post
 
 Exp2_Pre.calc <- Exp2_PrePost %>% 
-                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::select(c(Age, proportion_rel_dstage, Tank, Larvae_pCO2,Generation)) %>% 
                       dplyr::filter(Age %in% c(4, 10)) %>% 
                       tidyr::pivot_wider(names_from = Age, 
-                                         values_from = proportion,
+                                         values_from = proportion_rel_dstage,
                                          names_glue = "Age_{.name}") %>% # renmae new cols
                       dplyr::mutate(type       = "pre", # new col fo rpre
                                     delta.perc = Age_10 - Age_4) %>%  # sutract em
@@ -1129,10 +1156,10 @@ Exp2_Pre.calc <- Exp2_PrePost %>%
   
 
 Exp2_Post.calc <- Exp2_PrePost %>% 
-                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::select(c(Age, proportion_rel_dstage, Tank, Larvae_pCO2,Generation)) %>% 
                       dplyr::filter(Age %in% c(10, 18)) %>% 
                       tidyr::pivot_wider(names_from = Age, 
-                                         values_from = proportion,
+                                         values_from = proportion_rel_dstage,
                                          names_glue = "Age_{.name}") %>% # renmae new cols
                       dplyr::mutate(type       = "post", # new col fo rpre
                                     delta.perc = Age_18 - Age_10) %>%  # sutract em
@@ -1159,10 +1186,10 @@ sort(unique(Exp4_PrePost$Age)) # 2  6  8 10 14 21
 # Day 21 == 8 days post
 
 Exp4_Pre.calc <- Exp4_PrePost %>% 
-                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2, Generation)) %>% 
+                      dplyr::select(c(Age, proportion_rel_dstage, Tank, Larvae_pCO2, Generation)) %>% 
                       dplyr::filter(Age %in% c(8, 14)) %>% 
                       tidyr::pivot_wider(names_from = Age, 
-                                         values_from = proportion,
+                                         values_from = proportion_rel_dstage,
                                          names_glue = "Age_{.name}") %>% # renmae new cols
                       dplyr::mutate(type       = "pre", # new col fo rpre
                                     delta.perc = Age_14 - Age_8) %>%  # sutract em
@@ -1174,10 +1201,10 @@ Exp4_Pre.calc <- Exp4_PrePost %>%
   
 
 Exp4_Post.calc <- Exp4_PrePost %>% 
-                      dplyr::select(c(Age, proportion, Tank, Larvae_pCO2,Generation)) %>% 
+                      dplyr::select(c(Age, proportion_rel_dstage, Tank, Larvae_pCO2,Generation)) %>% 
                       dplyr::filter(Age %in% c(14, 21)) %>% 
                       tidyr::pivot_wider(names_from = Age, 
-                                         values_from = proportion,
+                                         values_from = proportion_rel_dstage,
                                          names_glue = "Age_{.name}") %>% # renmae new cols
                       dplyr::mutate(type       = "post", # new col fo rpre
                                     delta.perc = Age_21 - Age_14) %>%  # sutract em
@@ -1206,15 +1233,15 @@ Exp2Exp4_PrePost.master$Generation <- factor(Exp2Exp4_PrePost.master$Generation)
 TwoWay.Pre <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'pre'))
                   ))
-shapiro.test(resid(TwoWay.Pre)) # 0.6349 - pass
+shapiro.test(resid(TwoWay.Pre)) # 0.05353 - pass
 leveneTest(TwoWay.Pre) # 0.7313 - pass
 summary(TwoWay.Pre)
 
-#                         Df  Sum Sq  Mean Sq F value Pr(>F)  
-# Larvae_pCO2             1 0.00181 0.001806   0.563 0.4676  
-# Generation              1 0.01276 0.012760   3.977 0.0694 .
-# Larvae_pCO2:Generation  1 0.00077 0.000770   0.240 0.6330  
-# Residuals              12 0.03851 0.00320
+#                        Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2             1 0.0023  0.0023   0.241    0.632    
+# Generation              1 0.3412  0.3412  36.339 5.95e-05 ***
+# Larvae_pCO2:Generation  1 0.0010  0.0010   0.107    0.749    
+# Residuals              12 0.1127  0.0094 
 
 
 
@@ -1222,26 +1249,21 @@ summary(TwoWay.Pre)
 TwoWay.Post <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post'))
                   ))
-shapiro.test(resid(TwoWay.Post)) # 0.03677 - non-normal
-leveneTest(TwoWay.Post) # 0.2298 - pass
+shapiro.test(resid(TwoWay.Post)) # 0.007293 - non-normal
+leveneTest(TwoWay.Post) # 0.6631 - pass
 # * run non-parametric
 SRH.Post <- scheirerRayHare(abs.delta.perc ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post')))
-#                        Df  Sum Sq      H  p.value
-# Larvae_pCO2             1 100.000 4.4444 0.035015 **
-# Generation              1  26.667 1.1852 0.276303
-# Larvae_pCO2:Generation  1  52.267 2.3230 0.127477
-# Residuals              12 158.567 
+#                        Df  Sum Sq      H p.value
+# Larvae_pCO2             1 110.250 4.8640 0.02742
+# Generation              1 166.667 7.3529 0.00670
+# Larvae_pCO2:Generation  1   0.817 0.0360 0.84945
+# Residuals              12  62.267
 # posthoc dunn test for main effect of arvae pCO2
 
 ```
 
 ```{r Plots for Pre and Post}
-
-Exp2Exp4_PrePost.master  %>% 
-  ggplot(aes(y=abs.delta.perc, x = Larvae_pCO2)) +
-  geom_bar() + 
-  facet_wrap(~Generation)
 
 Exp2Exp4_PrePost.summ <- Exp2Exp4_PrePost.master %>% 
                           dplyr::select(Generation,type,Larvae_pCO2,abs.delta.perc) %>% 

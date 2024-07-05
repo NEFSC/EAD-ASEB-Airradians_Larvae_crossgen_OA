@@ -1,11 +1,21 @@
 ---
-title: "Larval Growth and Survival"
+title: "Survival D stage to metammorphosis"
 author: "Sam Gurr"
 date: "9/29/2023"
 output:
   pdf_document: default
   html_document: default
 ---
+
+
+# Survival D stage to metammorphosis
+
+**About**: These data presented here are relative to the D-stage density within tank,
+useful comparison to the data from stocking densitry (as embryos) to metamorphosis.
+Possile benefit of this analysis is the cross-generation comparison, as fertilization success differed
+strongly between treatment and generation thus the weight of treatemnt and/or generation effect could be skewed toward 
+the inital development. Instead, here the survival analysis is investigated after D-hinge development giving a 
+perspective of treatment/generation effect across the larval period. 
 
 ### SET UP
 ```{r setup, include=FALSE}

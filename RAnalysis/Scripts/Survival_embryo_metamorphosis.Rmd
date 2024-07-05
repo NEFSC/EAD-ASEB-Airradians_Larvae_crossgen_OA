@@ -1,11 +1,18 @@
 ---
-title: "Larval Growth and Survival"
+title: "Survival embryo to metammorphosis"
 author: "Sam Gurr"
 date: "9/29/2023"
 output:
   pdf_document: default
   html_document: default
 ---
+
+
+# Survival stocking density (as embryos) to metamorphosis
+
+**About**: These data presented here are relative to the stocking density *which was the same across treamtents*
+because the stocking was acheived by allocateing *equal volume of counted embryos to tanks*
+
 
 ### SET UP
 ```{r setup, include=FALSE}
@@ -45,10 +52,8 @@ library(gtsummary) # tbl_survfit
 # the survival at Dstage as abnormality data can be used for the inital assessment 
 
 df<- read.csv("Data/larval_survival.csv", header = T) %>% 
-                  dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival_rel_dstage,
-                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_embryos))) %>% 
-                  # dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
-                  
+                  dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival_rel_stocking)) %>% 
+
                   # rename the variables for consistency using 'case_when'
                   dplyr::mutate(Parental_OA = case_when(Parental_OA ==  "LOW" ~ "Low pCO2", 
                                                         Parental_OA ==  "MODERATE" ~ "Moderate pCO2", 
@@ -493,7 +498,7 @@ Exp2_larvaeKaplanMeier.age <- survExp2 %>%
                        # add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
-pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_age.pdf", width=5, height = 4)
+pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_age_stocking.pdf", width=5, height = 4)
 Exp2_larvaeKaplanMeier.age
 dev.off()
 
@@ -512,7 +517,7 @@ Exp2_larvaeKaplanMeier.prop <- survExp2_proptime %>%
                        # add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
-pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_proptime.pdf", width=5, height = 4)
+pdf("Output/1_Survival_Growth/Expeirment2_Survival_KaplanMeier_proptime_stocking.pdf", width=5, height = 4)
 Exp2_larvaeKaplanMeier.prop
 dev.off()
 
@@ -828,9 +833,10 @@ dev.off()
 * NOTE: omit the 'high' treatment in F1 as this was not present in F2 larvae
 ```{r merge Experiments 2 and 4}
 # all - with tank replicate included
-
+head(binary_Exp2_larvae)
+head(binary_Exp4_larvae)
 binary_Exp2_Exp4_all             <- rbind( (binary_Exp2_larvae),# %>% dplyr::select(!cluster)),
-                                           (binary_Exp4_larvae)# %>% dplyr::select(!Tank_num))
+                                           (binary_Exp4_larvae %>% dplyr::select(!c(Tank_num, ID)))
                                            ) %>% 
                                          dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
                                          dplyr::mutate(Prop_time_metamophosis = 

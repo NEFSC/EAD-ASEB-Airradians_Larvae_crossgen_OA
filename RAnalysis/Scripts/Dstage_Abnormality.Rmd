@@ -796,6 +796,8 @@ aovMOD_Exp1_mod_means   <- multcomp::cld(object = aovMOD_Exp1_means_contr$emmean
 
 capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_TukeyHSD.doc") 
 
+
+
 ```
 
 ```{r  Statistics; F1 Experiment #2} 

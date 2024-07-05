@@ -30,6 +30,8 @@ library(emmeans)
 library(ggpubr)
 library(Rmisc)
 library(rstatix)
+library(emmeans)
+library(nlme)
 ```
 
 
@@ -306,7 +308,12 @@ differences in diet betwen generations. *therefore we can only address the effec
     
 **output folder** = '1_Survival_Growth'
 
-```{r  RM Anova length; F1 Experiment #2 low moderate high}
+
+## RM ANOVA Expeirment 2
+
+* all treatment low moderate and high
+
+```{r  RM Anova length; F1 Experiment #2 ALL}
 
 # (1) Repeated measures ANOVA
 
@@ -314,12 +321,9 @@ differences in diet betwen generations. *therefore we can only address the effec
 # (1.1) All treatment Low, moderate, and high
 Exp2_RMAnova    <-  Exp2 %>%
                      dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
-                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                     convert_as_factor(ID, Larvae_pCO2, Age) %>% 
                      na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
-
-Exp2_RMAnova$ID <- factor(Exp2_RMAnova$ID)
-
-
+str(Exp2_RMAnova)
 
 # * summary stats, QQ
 MeanSE_RM.Exp2 <- Exp2_RMAnova %>%  group_by(Age,Larvae_pCO2) %>% get_summary_stats(Length, type = "mean_sd")
@@ -352,76 +356,170 @@ dev.off()
 
 
 # RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
-# un using anova_test
+library(nlme)
+library(rstatix)
+# un using anova_test from rstatix
 df_Exp2_res.aov <- anova_test(data = Exp2_RMAnova, 
-                              formula = Length ~ Age*Larvae_pCO2 + Error(ID/Age))
+                              formula = Length ~ Age*Larvae_pCO2 + Error(ID/(Age)))
+df_Exp2_res.aov
 get_anova_table(df_Exp2_res.aov)
 #            Effect  DFn   DFd       F        p p<.05   ges
-# 1     Larvae_pCO2 2.00 10.00 102.294 2.20e-07     * 0.884
-# 2             Age 1.44 14.36 220.110 7.52e-11     * 0.933
-# 3 Larvae_pCO2:Age 2.87 14.36  10.723 6.45e-04     * 0.574
+# 1     Larvae_pCO2 2.00 10.00 102.294 2.20e-07     * 0.884 # a between subject factor, not GG correction
+# 2             Age 1.44 14.36 220.110 7.52e-11     * 0.933 # Greenhouse-Geisser correction to all within-subjects factors 
+# 3 Larvae_pCO2:Age 2.87 14.36  10.723 6.45e-04     * 0.574 # Greenhouse-Geisser correction to all within-subjects factors 
+
+# "GG": applies Greenhouse-Geisser correction to all within-subjects 
+# factors even if the assumption of sphericity is met (i.e., Mauchly's test is not significant, p > 0.05).
+
+# $`Sphericity Corrections`
+#            Effect   GGe      DF[GG]    p[GG] p[GG]<.05   HFe      DF[HF]    p[HF] p[HF]<.05
+# 1             Age 0.479 1.44, 14.36 7.52e-11         * 0.537 1.61, 16.11 6.19e-12         *
+# 2 Larvae_pCO2:Age 0.479 2.87, 14.36 6.45e-04         * 0.537 3.22, 16.11 3.40e-04         *
 
 
-lme_Exp2 = lme(Length ~ Larvae_pCO2 * Age, data=Exp2_RMAnova, random = ~1|ID)
-anova(lme_Exp2)
-# # (Intercept)	    1	32	4642.294    <.0001
-# # Larvae_pCO2	    2	12	78.477	    <.0001
-# # Age	            3	32	205.366	    <.0001
-# # Larvae_pCO2:Age	6	32	11.140	    <.0001
 
-summary(glht(lme_Exp2, linfct=mcp(Larvae_pCO2 = "Tukey")), 
-        test = adjusted(type = "bonferroni"))# low is not different frommoderate 
-summary(glht(lme_Exp2, linfct=mcp(Age = "Tukey")), 
-        test = adjusted(type = "bonferroni")) # all timepoints differ significnatly
-
-
-# POSTHOC TEST ::::::::::::::::::::::::::::::::::
-Exp2_RMAnova$Length <- as.numeric(Exp2_RMAnova$Length)
-Exp2_RMAnova        <- ungroup(Exp2_RMAnova)
-
-Exp2_RMAnova %>%
-  group_by(Age) %>%
-  levene_test(Length ~ Larvae_pCO2)
-# 2	2	10	1.5289361	0.2634134
-# 4	2	10	1.3960797	0.2919313
-# 8	2	12	0.5555818	0.5878142
-# 10	2	12	2.2449656	0.1485164
-Exp2_RMAnova %>%
-  group_by(Age) %>%
-  shapiro_test(Length)
-# 2	Length	0.7397795	0.001429861	
-# 4	Length	0.7860260	0.004673374	
-# 8	Length	0.8452431	0.014881953	
-# 10	Length	0.8369853	0.011422036	
+# anova_test Posthoc airwise comparisons
+df_Exp2.one.way <- Exp2_RMAnova %>% # effects of treamtnet at each timepoint
+                    dplyr::filter(!ID %in% c(1,6, 15)) %>% 
+                    group_by(Age) %>%
+                    anova_test(dv = Length, wid = ID, between = Larvae_pCO2) %>%
+                    get_anova_table() %>%
+                    adjust_pvalue(method = "bonferroni")
+# 1	Larvae_pCO2	2	9	102.455	6.43e-07	*	0.958	2.572e-06
+# 2	Larvae_pCO2	2	9	81.268	1.74e-06	*	0.948	6.960e-06
+# 3	Larvae_pCO2	2	9	56.301	8.16e-06	*	0.926	3.264e-05
+# 4	Larvae_pCO2	2	9	32.018	8.09e-05	*	0.877	3.236e-04
 
 
-# Effect of treatment within each timepoint
-one.way <- Exp2_RMAnova %>%
-                dplyr::group_by(Age) %>%
-                rstatix::anova_test(dv = Length, wid = ID, between = Larvae_pCO2) %>%
-                rstatix::get_anova_table() %>%
-                adjust_pvalue(method = "bonferroni")
-one.way
-# 2	Larvae_pCO2	2	 10	  119.465	1.05e-07	*	0.960	4.200e-07
-# 4	Larvae_pCO2	2	 10	  94.100	3.27e-07	*	0.950	1.308e-06
-# 8	Larvae_pCO2	2	 12 	 59.061	6.15e-07	*	0.908	2.460e-06
-# 10	Larvae_pCO2	2	12	38.017	6.41e-06	*	0.864	2.564e-05
+df_Exp2.pwc <- Exp2_RMAnova %>% # pairwise compairons btwn treamtnet groutps at each timepoint
+        dplyr::filter(!ID %in% c(1,6, 15)) %>% 
+        group_by(Age) %>%
+        pairwise_t_test(
+        Length ~ Larvae_pCO2, paired = TRUE,
+        p.adjust.method = "bonferroni"
+)
+data.frame(df_Exp2.pwc)
 
-# Pairwise comparisons between treatment groups
-# this is alike a posthoc t text within time point
-# NOTE: 1 from low, 6 from moderate adn 15 from high, 6 and 15 only present once through all datapoints, 
-# whereas low had all tanks throughout, omititing 2, 3, 4, and 5 (tank IDs) result in 
-# low not significant from moderate  in all dates, but low and moderate differencet from high. 
-pwc <- Exp2_RMAnova %>%
-  dplyr::filter(!(ID %in% c(5, 6,15))) %>% # 6 and 15 were only present once,
-  group_by(Age) %>%
-  pairwise_t_test(
-    Length ~ Larvae_pCO2, paired = TRUE,
-    p.adjust.method = "bonferroni"
-    )
-pwc
+# 2	Length	Low pCO2	Moderate pCO2	4	4	2.5018718	3	0.088	0.263	
+# 2	Length	Low pCO2	High pCO2	4	4	9.1910065	3	0.003	0.008	 **
+# 2	Length	Moderate pCO2	High pCO2	4	4	10.2443196	3	0.002	0.006	**
+#   
+# 4	Length	Low pCO2	Moderate pCO2	4	4	8.4736847	3	0.003	0.010	**
+# 4	Length	Low pCO2	High pCO2	4	4	11.6839752	3	0.001	0.004	**
+# 4	Length	Moderate pCO2	High pCO2	4	4	11.2071922	3	0.002	0.005	**
+#   
+# 8	Length	Low pCO2	Moderate pCO2	4	4	-0.2398555	3	0.826	1.000	
+# 8	Length	Low pCO2	High pCO2	4	4	8.9586382	3	0.003	0.009	**
+# 8	Length	Moderate pCO2	High pCO2	4	4	7.0232622	3	0.006	0.018	**
+#   
+# 10	Length	Low pCO2	Moderate pCO2	4	4	1.6533741	3	0.197	0.591	
+# 10	Length	Low pCO2	High pCO2	4	4	5.3176706	3	0.013	0.039	**
+# 10	Length	Moderate pCO2	High pCO2	4	4	5.8656204	3	0.010	0.030 **
+
+
+
+
+df_Exp2.one.way2 <- Exp2_RMAnova %>%  # Effect of time at each level of treatment
+        dplyr::filter(!ID %in% c(1,6, 15)) %>% 
+        group_by(Larvae_pCO2) %>%
+        anova_test(dv = Length, wid = ID, within = Age) %>%
+        get_anova_table() %>%
+        adjust_pvalue(method = "bonferroni")
+data.frame(one.way2)
+# Low pCO2	Age	1.17	3.52	426.704	7.78e-05	*	0.992	2.334e-04
+# Moderate pCO2	Age	3.00	9.00	868.102	2.13e-11	*	0.991	6.390e-11
+# High pCO2	Age	1.26	3.79	8.683	4.30e-02	*	0.653	1.290e-01
+
+
+
+
+df_Exp2.pwc2 <- Exp2_RMAnova %>%  # Effect of time at each level of treatment
+        dplyr::filter(!ID %in% c(1,6, 15)) %>% 
+        group_by(Larvae_pCO2) %>%
+        pairwise_t_test(
+        Length ~ Age, paired = TRUE,
+        p.adjust.method = "bonferroni"
+)
+data.frame(df_Exp2.pwc2)
+
+# Low pCO2	Length	1	2	4	4	-20.672596	3	2.48e-04	0.001000	**
+# Low pCO2	Length	1	3	4	4	-34.300321	3	5.45e-05	0.000327	**
+# Low pCO2	Length	1	4	4	4	-28.556780	3	9.43e-05	0.000566		**
+# Low pCO2	Length	2	3	4	4	-22.057764	3	2.04e-04	0.001000		**
+# Low pCO2	Length	2	4	4	4	-26.941779	3	1.12e-04	0.000672		**
+# Low pCO2	Length	3	4	4	4	-4.318825	3	2.30e-02	0.137000	
+# 
+# Moderate pCO2	Length	1	2	4	4	-12.799619	3	1.00e-03	0.006000		**
+# Moderate pCO2	Length	1	3	4	4	-39.729681	3	3.51e-05	0.000211		**
+# Moderate pCO2	Length	1	4	4	4	-29.893758	3	8.22e-05	0.000493		**
+# Moderate pCO2	Length	2	3	4	4	-31.600363	3	6.96e-05	0.000418		**
+# Moderate pCO2	Length	2	4	4	4	-27.868105	3	1.01e-04	0.000606		**
+# Moderate pCO2	Length	3	4	4	4	-8.254147	3	4.00e-03	0.022000	**
+# 
+# High pCO2	Length	1	2	4	4	-2.457521	3	9.10e-02	0.547000	
+# High pCO2	Length	1	3	4	4	-3.214674	3	4.90e-02	0.293000	
+# High pCO2	Length	1	4	4	4	-3.194744	3	5.00e-02	0.297000	
+# High pCO2	Length	2	3	4	4	-2.446672	3	9.20e-02	0.552000	
+# High pCO2	Length	2	4	4	4	-2.960276	3	6.00e-02	0.357000	
+# High pCO2	Length	3	4	4	4	-2.019974	3	1.37e-01	0.822000	
+
+
+
+
+# using lme function from nlkme
+ctrl <- lmeControl(opt='optim')
+lme_Exp2.mod  <- lme(Length ~ Age * Larvae_pCO2, data=Exp2_RMAnova, 
+                               random = ~Age|ID,
+                               method="REML",
+                               control=ctrl
+                               )
+
+lme_Exp2.mod.aov       <- (anova(lme_Exp2.mod))
+#              numDF denDF F-value p-value
+# Age	             3	32	115.94	<.0001
+# Larvae_pCO2	     2	12	388.82	<.0001
+# Age:Larvae_pCO2	 6	32	6.36	  2e-04
+
+# POSTHOC TEST
+library(emmeans)
+
+lme_Exp2.emmeans.pCO2         <- emmeans(lme_Exp2.mod, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
+lme_Exp2.emmeans.pCO2.letters <- multcomp::cld(object = lme_Exp2.emmeans.pCO2$emmeans,
+                                              Letters = letters)
+ # Larvae_pCO2   emmean   SE df lower.CL upper.CL .group
+ # High pCO2         88 2.56 12     82.4     93.6  a    
+ # Moderate pCO2    131 2.56 12    125.8    137.0   b   
+ # Low pCO2         138 2.55 12    132.3    143.4   b 
+ 
+lme_Exp2.emmeans.Age         <- emmeans(lme_Exp2.mod, list(pairwise ~ Age), adjust = "tukey")
+lme_Exp2.emmeans.Age.letters <- multcomp::cld(object = lme_Exp2.emmeans.Age$emmeans,
+                                              Letters = letters)
+ # Age emmean    SE df lower.CL upper.CL .group
+ # 2     87.8 0.798 14     86.1     89.5  a    
+ # 4     96.2 0.961 14     94.2     98.3   b   
+ # 8    140.1 2.734 14    134.2    145.9    c  
+ # 10   152.2 3.881 14    143.9    160.5     d 
+
+lme_Exp2.emmeans.int         <- emmeans(lme_Exp2.mod, list(pairwise ~ Age:Larvae_pCO2), adjust = "tukey")
+lme_Exp2.emmeans.int.letters <- multcomp::cld(object = lme_Exp2.emmeans.int$emmeans,
+                                              Letters = letters)
+ # Age Larvae_pCO2   emmean   SE df lower.CL upper.CL .group 
+ # 2   High pCO2       71.7 1.41 12     68.6     74.7  a     
+ # 4   High pCO2       77.2 1.71 12     73.4     80.9  a     
+ # 2   Moderate pCO2   94.9 1.41 12     91.8     98.0   b    
+ # 2   Low pCO2        96.8 1.33 12     93.9     99.7   bc   
+ # 8   High pCO2       98.2 4.73 12     87.9    108.5   bcd  
+ # 4   Moderate pCO2  103.7 1.71 12    100.0    107.5    cd  
+ # 10  High pCO2      104.9 6.72 12     90.3    119.6   bcd  
+ # 4   Low pCO2       107.8 1.56 12    104.4    111.2     d  
+ # 8   Moderate pCO2  157.7 4.73 12    147.4    168.0      ef
+ # 8   Low pCO2       164.3 4.73 12    153.9    174.6      e 
+ # 10  Moderate pCO2  169.3 6.72 12    154.7    184.0      ef
+ # 10  Low pCO2       182.3 6.72 12    167.7    197.0       f
 
 ```
+
+* moderate v. low
 
 ```{r  RM Anova length; F1 Experiment #2 low moderate ONLY}
 
@@ -469,47 +567,77 @@ bxp_RM.Exp2
 dev.off()
 
 
+
+
 # RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
-df_Exp2_res.aov <- anova_test(data = Exp2_RMAnova_LvM, 
+library(nlme)
+library(rstatix)
+# un using anova_test from rstatix
+df_Exp2_LvM_res.aov <- anova_test(data = Exp2_RMAnova_LvM, 
                               formula = Length ~ Age*Larvae_pCO2 + Error(ID/Age))
-get_anova_table(df_Exp2_res.aov)
+df_Exp2_LvM_res.aov
+get_anova_table(df_Exp2_LvM_res.aov)
 #            Effect  DFn   DFd       F        p p<.05   ges
 # 1     Larvae_pCO2 1.00  7.00   4.193 8.00e-02       0.206
 # 2             Age 1.75 12.24 640.833 6.66e-13     * 0.981
 # 3 Larvae_pCO2:Age 1.75 12.24   1.082 3.61e-01       0.081
 
-lme_Exp2 = lme(Length ~ Larvae_pCO2 * Age, data=Exp2_RMAnova_LvM, random = ~1|ID)
-anova(lme_Exp2)
-# Larvae_pCO2	    1	8	0.279	0.6116
-# Age	            3	22	661.323	<.0001
-# Larvae_pCO2:Age	3	22	1.512	0.2393
+# $`Mauchly's Test for Sphericity`
+#            Effect     W     p p<.05
+# 1             Age 0.035 0.002     *
+# 2 Larvae_pCO2:Age 0.035 0.002     *
+  
+# $`Sphericity Corrections`
+#            Effect   GGe      DF[GG]    p[GG] p[GG]<.05   HFe      DF[HF]    p[HF] p[HF]<.05
+# 1             Age 0.583 1.75, 12.24 6.66e-13         * 0.761 2.28, 15.99 2.78e-16         *
+# 2 Larvae_pCO2:Age 0.583 1.75, 12.24 3.61e-01           0.761 2.28, 15.99 3.70e-01          
 
-summary(glht(lme_Exp2, linfct=mcp(Age = "Tukey")), 
-        test = adjusted(type = "bonferroni"))# low is not different frommoderate 
+# using lme function from nlkme
+ctrl <- lmeControl(opt='optim')
+lme_Exp2_LvM.mod  <- lme(Length ~ Age * Larvae_pCO2, data=Exp2_RMAnova_LvM, 
+                               random = ~Age|ID,
+                               method="REML",
+                               control=ctrl
+                               )
 
-# POSTHOC TEST ::::::::::::::::::::::::::::::::::
-Exp2_RMAnova_LvM$Length <- as.numeric(Exp2_RMAnova_LvM$Length)
-Exp2_RMAnova_LvM        <- ungroup(Exp2_RMAnova_LvM)
+lme_Exp2_LvM.mod.aov       <- (anova(lme_Exp2_LvM.mod))
+#              numDF denDF F-value p-value
+# Age	              3	22	 642.64	 <.0001
+# Larvae_pCO2	      1	8	   15.23	 0.0045
+# Age:Larvae_pCO2	  3	22	 3.72	   0.0264
 
-Exp2_RMAnova_LvM %>%
-  group_by(Age) %>%
-  levene_test(Length ~ Larvae_pCO2)
-# 2	1	7	0.24378413	0.6365998
-# 4	1	7	0.03130925	0.8645631
-# 8	1	8	0.22119004	0.6506897
-# 10	1	8	0.21887714	0.6523773
+# POSTHOC TEST
+library(emmeans)
 
-Exp2_RMAnova_LvM %>%
-  group_by(Age) %>%
-  shapiro_test(Length)
-# 2	Length	0.8698218	0.1224141	
-# 4	Length	0.9169024	0.3672120	
-# 8	Length	0.9437437	0.5953709	
-# 10	Length	0.9692177	0.8834981	
+lme_Exp2.emmeans.pCO2         <- emmeans(lme_Exp2_LvM.mod, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
+lme_Exp2.emmeans.pCO2.letters <- multcomp::cld(object = lme_Exp2.emmeans.pCO2$emmeans,
+                                              Letters = letters)
+ # Larvae_pCO2   emmean   SE df lower.CL upper.CL .group
+ # Moderate pCO2    131 1.87  8      127      136  a    
+ # Low pCO2         138 1.86  8      134      142   b 
+ 
+lme_Exp2.emmeans.Age         <- emmeans(lme_Exp2_LvM.mod, list(pairwise ~ Age), adjust = "tukey")
+lme_Exp2.emmeans.Age.letters <- multcomp::cld(object = lme_Exp2.emmeans.Age$emmeans,
+                                              Letters = letters)
+ # Age emmean    SE df lower.CL upper.CL .group
+ # 2     95.7 0.469  9     94.7     96.8  a    
+ # 4    105.7 0.575  9    104.4    107.0   b   
+ # 8    161.0 2.882  9    154.5    167.5    c  
+ # 10   175.8 2.547  9    170.1    181.6     d 
 
-
+lme_Exp2.emmeans.int         <- emmeans(lme_Exp2_LvM.mod, list(pairwise ~ Age:Larvae_pCO2), adjust = "tukey")
+lme_Exp2.emmeans.int.letters <- multcomp::cld(object = lme_Exp2.emmeans.int$emmeans,
+                                              Letters = letters)
+ # Age Larvae_pCO2   emmean    SE df lower.CL upper.CL .group # NO DIFFERENCES WITHIN TIME POINT
+ # 2   Moderate pCO2   94.6 0.685  8     93.0     96.2  a    
+ # 2   Low pCO2        96.8 0.642  8     95.3     98.3  a    
+ # 4   Moderate pCO2  103.6 0.856  8    101.6    105.5   b   
+ # 4   Low pCO2       107.8 0.768  8    106.0    109.6   b   
+ # 8   Moderate pCO2  157.7 4.076  8    148.3    167.1    c  
+ # 8   Low pCO2       164.3 4.076  8    154.9    173.7    cd 
+ # 10  Moderate pCO2  169.3 3.602  8    161.0    177.6     de
+ # 10  Low pCO2       182.3 3.602  8    174.0    190.6      e
 ```
-
 
 ```{r ANOVA end length; F1 Expeirent #2}
 # (2) Size at metamorphosis
@@ -604,8 +732,8 @@ capture.output(Exp2_AOV_res.means,
 
 ```
 
-
-```{r  RM Anova length; F1 Experiment #4}
+## RM ANOVA Expeirment 4
+```{r  RM Anova length; F2 Experiment #4}
 
 # (1) Repeated measures ANOVA
 
@@ -635,90 +763,67 @@ Exp4_RMAnova %>%
   group_by(Larvae_pCO2, Age) %>%
   identify_outliers(Length)
 
-# Run statistical model 
-df_Exp4_res.aov <- anova_test(data = Exp4_RMAnova, 
+
+
+# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
+library(nlme)
+library(rstatix)
+
+# only 4 timepoints can be run due to low power, used every 4 days 
+Exp4_RMAnova.test <- Exp4_RMAnova %>% dplyr::filter(Age %in% c(2,6,10,14))
+
+# un using anova_test from rstatix
+df_Exp4_res.aov <- anova_test(data = Exp4_RMAnova.test, 
                               formula = Length ~ Age*Larvae_pCO2 + Error(ID/Age))
+df_Exp4_res.aov
 get_anova_table(df_Exp4_res.aov)
 #            Effect DFn DFd       F        p p<.05   ges
-# 1     Larvae_pCO2   1   4  11.133 2.90e-02     * 0.402
-# 2             Age   6  24 545.062 2.01e-24     * 0.990
-# 3 Larvae_pCO2:Age   6  24   1.257 3.13e-01       0.193
+# 1     Larvae_pCO2   1   4   7.329 5.40e-02       0.326
+# 2             Age   3  12 464.461 1.13e-12     * 0.988
+# 3 Larvae_pCO2:Age   3  12   0.595 6.30e-01       0.099
 
-lme_Exp4 = lme(Length ~ Larvae_pCO2 * Age, data=Exp4_RMAnova, random = ~1|ID)
-anova(lme_Exp4)
-# Larvae_pCO2   	1	4	  11.13	 0.0289
-# Age	            6	24	545.06 <.0001
-# Larvae_pCO2:Age	6	24	1.26	 0.3134
+# $`Mauchly's Test for Sphericity`  # PASS - you see the DFs below are not integrate in the table above 
+#            Effect     W     p p<.05
+# 1             Age 0.072 0.236      
+# 2 Larvae_pCO2:Age 0.072 0.236      
+# 
+# $`Sphericity Corrections`
+#            Effect   GGe     DF[GG]    p[GG] p[GG]<.05   HFe    DF[HF]    p[HF] p[HF]<.05
+# 1             Age 0.457 1.37, 5.49 1.12e-06         * 0.616 1.85, 7.4 1.91e-08         *
+# 2 Larvae_pCO2:Age 0.457 1.37, 5.49 5.24e-01           0.616 1.85, 7.4 5.64e-01         
 
-summary(glht(lme_Exp4, linfct=mcp(Age = "Tukey")), 
-        test = adjusted(type = "bonferroni"))# low is not different frommoderate 
+# using lme function from nlkme
+ctrl <- lmeControl(opt='optim')
+lme_Exp4.mod  <- lme(Length ~ Age * Larvae_pCO2, data=Exp4_RMAnova.test, 
+                               random = ~Age|ID,
+                               method="REML",
+                               control=ctrl
+                               )
 
+lme_Exp4.mod.aov       <- (anova(lme_Exp4.mod))
+#              numDF denDF F-value p-value
+# Age	             3	12	2997.29	<.0001
+# Larvae_pCO2      1	4	  48.94	  0.0022
+# Age:Larvae_pCO2	 3	12	3.07	  0.0689
 
+# POSTHOC TEST
+library(emmeans)
 
-# POSTHOC TEST ::::::::::::::::::::::::::::::::::
-Exp4_RMAnova$Length <- as.numeric(Exp4_RMAnova$Length)
-Exp4_RMAnova        <- ungroup(Exp4_RMAnova)
-
-
-# Effect of time at each level of treatment
-one.way2 <- Exp4_RMAnova %>%
-  # group_by(Larvae_pCO2) %>%
-  anova_test(dv = Length, wid = ID, within = Age) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-# Pairwise comparisons between time points
-pwc2 <- Exp4_RMAnova %>%
-  # group_by(Larvae_pCO2) %>%
-  pairwise_t_test(
-    Length ~ Age, paired = TRUE,
-    p.adjust.method = "bonferroni"
-    )
-pwc2
-
-
-Exp4_RMAnova %>%
-  group_by(Age) %>%
-  levene_test(Length ~ Larvae_pCO2)
-# 2	1	4	0.002423916	0.9630937
-# 4	1	4	0.011976048	0.9181278
-# 6	1	4	0.008264463	0.9319353
-# 8	1	4	0.769961977	0.4297721
-# 10	1	4	0.159425890	0.7100857
-# 12	1	4	0.415898618	0.5541153
-# 14	1	4	0.155470250	0.7134802
-Exp4_RMAnova %>%
-  group_by(Age) %>%
-  shapiro_test(Length)
-# 2	Length	0.7885047	0.04620376	
-# 4	Length	0.9810873	0.95683312	
-# 6	Length	0.9626058	0.83958108	
-# 8	Length	0.9339472	0.61091020	
-# 10	Length	0.8628816	0.19927339	
-# 12	Length	0.8942218	0.34090174	
-# 14	Length	0.9367272	0.63295567	
-
-
-# Effect of treatment within each timepoint
-one.way <- Exp4_RMAnova %>%
-                dplyr::group_by(Age) %>%
-                rstatix::anova_test(dv = Length, wid = ID, between = Larvae_pCO2) %>%
-                rstatix::get_anova_table() %>%
-                adjust_pvalue(method = "bonferroni")
-one.way
-
-
-posthoc.OA <- rstatix::tukey_hsd(x = Exp4_RMAnova, formula = Length ~ Age*Larvae_pCO2) %>% 
-  dplyr::filter(term %in% 'Larvae_pCO2')
-
-
-posthoc.Age <- rstatix::tukey_hsd(x = Exp4_RMAnova, formula = Length ~ Age*Larvae_pCO2) %>% 
-  dplyr::filter(term %in% 'Age')
-
-# write output tables and posthoc
-capture.output(get_anova_table(df_Exp4_res.aov),
-               file="Output/1_Survival_Growth/size_growth/Experiment4_Length_RManova.doc") 
-capture.output(posthoc,
-               file="Output/1_Survival_Growth/size_growth/Experiment4_Length_RManova_posthoc.doc")
+lme_Exp4.emmeans.pCO2         <- emmeans(lme_Exp4.mod, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
+lme_Exp4.emmeans.pCO2.letters <- multcomp::cld(object = lme_Exp4.emmeans.pCO2$emmeans,
+                                              Letters = letters)
+ # Larvae_pCO2   emmean   SE df lower.CL upper.CL .group
+ # Moderate pCO2    146 1.46  4      142      151  a    
+ # Low pCO2         152 1.46  4      148      156  a 
+ 
+lme_Exp4.emmeans.Age         <- emmeans(lme_Exp4.mod, list(pairwise ~ Age), adjust = "tukey")
+lme_Exp4.emmeans.Age.letters <- multcomp::cld(object = lme_Exp4.emmeans.Age$emmeans,
+                                              Letters = letters)
+ # Age emmean   SE df lower.CL upper.CL .group
+ # 2      102 1.09  5     99.2      105  a    
+ # 6      129 0.78  5    126.9      131   b   
+ # 10     166 3.64  5    157.0      176    c  
+ # 14     200 1.00  5    197.2      202     d 
 
 ```
 

@@ -376,7 +376,7 @@ get_anova_table(df_Exp2_res.aov)
 # 1             Age 0.479 1.44, 14.36 7.52e-11         * 0.537 1.61, 16.11 6.19e-12         *
 # 2 Larvae_pCO2:Age 0.479 2.87, 14.36 6.45e-04         * 0.537 3.22, 16.11 3.40e-04         *
 
-
+?anova_test
 
 # anova_test Posthoc airwise comparisons
 df_Exp2.one.way <- Exp2_RMAnova %>% # effects of treamtnet at each timepoint

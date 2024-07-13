@@ -1,0 +1,9 @@
+
+Call:
+lm(formula = Percent.deformed ~ Larvae_pCO2, data = (df_Exp1 %>% 
+    dplyr::filter(!Larvae_pCO2 %in% "High pCO2")))
+
+Coefficients:
+             (Intercept)  Larvae_pCO2Moderate pCO2  
+                 0.03875                   0.04175  
+

@@ -1,0 +1,5 @@
+"","**Characteristic**","**exp(Beta)**","**95% CI**","**p-value**"
+"1","Larvae_pCO2",NA,NA,NA
+"2","Low pCO2",NA,NA,NA
+"3","Moderate pCO2","1.08","1.05, 1.11","<0.001"
+"4","High pCO2","1.29","1.25, 1.32","<0.001"

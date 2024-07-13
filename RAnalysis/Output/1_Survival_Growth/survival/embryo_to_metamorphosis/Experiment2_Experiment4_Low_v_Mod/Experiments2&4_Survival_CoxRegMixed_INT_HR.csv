@@ -1,0 +1,4 @@
+"","**Characteristic**","**exp(Beta)**","**95% CI**","**p-value**"
+"1","Gen_pCO21_Moderate pCO2","1.07","1.05, 1.10","<0.001"
+"2","Gen_pCO22_Low pCO2","1.39","1.35, 1.43","<0.001"
+"3","Gen_pCO22_Moderate pCO2","1.41","1.37, 1.45","<0.001"

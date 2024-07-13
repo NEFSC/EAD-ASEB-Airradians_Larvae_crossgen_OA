@@ -11,7 +11,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+
 ```
 
 ```{r, echo=FALSE}
@@ -772,6 +774,7 @@ dev.off()
 
 ```{r  Statistics; F1 Experiment #1} 
 
+# All CO2 treatments low moderate and high
 aovMOD_Exp1 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
 shapiro.test(resid(aovMOD_Exp1)) # 0.4186 - norm
 leveneTest(aovMOD_Exp1) # 0.4478- pass
@@ -798,10 +801,23 @@ capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/E
 
 
 
+# Just moderate and high to comapre to the F2 experiment (Exp 4)
+aovMOD_Exp1_LowvMod <- lm(Percent.deformed ~ Larvae_pCO2, 
+                          data= (df_Exp1 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
+shapiro.test(resid(aovMOD_Exp1_LowvMod)) # 0.2501 - norm
+leveneTest(aovMOD_Exp1_LowvMod) # 0.2707- pass
+summary(aov(aovMOD_Exp1_LowvMod))
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Larvae_pCO2  1 0.003486 0.003486   1.198  0.316
+# Residuals    6 0.017456 0.002909
+
+capture.output(aovMOD_Exp1_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA_LowvMOD.doc") 
+
 ```
 
 ```{r  Statistics; F1 Experiment #2} 
 
+# All CO2 treatments low moderate and high
 aovMOD_Exp2 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
 shapiro.test(resid(aovMOD_Exp2)) # 0.2499 - norm
 leveneTest(aovMOD_Exp2) # 0.4246- pass
@@ -825,6 +841,22 @@ aovMOD_Exp2_mod_means   <- multcomp::cld(object = aovMOD_Exp2_means_contr$emmean
 # High pCO2     0.9093 0.0195 10  0.86570    0.953   b
  
 capture.output(aovMOD_Exp2_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_TukeyHSD.doc") 
+
+
+# Just moderate and high to comapre to the F2 experiment (Exp 4)
+aovMOD_Exp2_LowvMod <- lm(Percent.deformed ~ Larvae_pCO2, 
+                          data= (df_Exp2 %>% 
+                                   dplyr::select(Percent.deformed, Larvae_pCO2) %>% 
+                                   dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+                                   na.omit()))
+shapiro.test(resid(aovMOD_Exp2_LowvMod)) # 0.2539 - norm
+leveneTest(aovMOD_Exp2_LowvMod) # 0.237- pass
+summary(aov(aovMOD_Exp2_LowvMod))
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Larvae_pCO2  1 0.001027 0.001027   0.624  0.456
+# Residuals    7 0.011527 0.001647
+
+capture.output(aovMOD_Exp2_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA_LowvMOD.doc") 
 
 ```
 

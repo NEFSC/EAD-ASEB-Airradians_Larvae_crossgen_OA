@@ -19,8 +19,8 @@ because the stocking was acheived by allocateing *equal volume of counted embryo
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 ### LOAD PACKAGES

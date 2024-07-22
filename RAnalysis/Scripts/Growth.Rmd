@@ -700,7 +700,7 @@ Exp2_Anova <-  Exp2 %>%
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
 write.csv(Exp2_Anova,
-               file="Output/1_Survival_Growth/size_growth/Experiment2_MeanLength_metamorphosisLowvMod.csv") 
+               file="Output/1_Survival_Growth/size_growth/Experiment2/Experiment2_MeanLength_metamorphosisLowvMod.csv") 
 
 # * run one way anova 
 Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_Anova)
@@ -727,9 +727,9 @@ Exp2_AOV_res.means <- multcomp::cld(object = Exp2_AOV_res.means$emmeans, Letters
 
 # write outputs
 capture.output(summary(aov(Exp2_AOV_res.mod)),
-               file="Output/1_Survival_Growth/size_growth/Experiment2_Length_metamorphosis_anova_LowvMod.doc") 
+               file="Output/1_Survival_Growth/size_growth/Experiment2/Experiment2_Length_metamorphosis_anova_LowvMod.doc") 
 capture.output(Exp2_AOV_res.means,
-               file="Output/1_Survival_Growth/size_growth/Experiment2_Length_metamorphosis_posthoc_LowvMod.doc") 
+               file="Output/1_Survival_Growth/size_growth/Experiment2/Experiment2_Length_metamorphosis_posthoc_LowvMod.doc") 
 
 
 ```
@@ -841,7 +841,7 @@ Exp4_Anova <-  Exp4 %>%
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
 write.csv(Exp4_Anova,
-               file="Output/1_Survival_Growth/size_growth/Experiment4_MeanLength_metamorphosisLowvMod.csv") 
+               file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_MeanLength_metamorphosisLowvMod.csv") 
 
 
 

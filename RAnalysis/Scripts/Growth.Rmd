@@ -30,8 +30,9 @@ library(emmeans)
 library(ggpubr)
 library(Rmisc)
 library(rstatix)
-library(emmeans)
 library(nlme)
+library(lme4)
+library(multcomp)
 ```
 
 
@@ -138,7 +139,7 @@ let's just go with size over time for our data report (as discussed with lead PI
 ```{r  Mean table + plots; F1 Experiment #2}
 
 # larvae size 
-Exp2_summ.length <- summarySE(Exp2, measurevar="Length", groupvars=c("Age", "Larvae_pCO2"))
+Exp2_summ.length <- Rmisc::summarySE(Exp2, measurevar="Length", groupvars=c("Age", "Larvae_pCO2"))
 Exp2_summ.length
 
 write.csv(Exp2_summ.length, file = "Output/1_Survival_Growth/size_growth/Experiment2_Length_MeanSE.csv")
@@ -297,23 +298,50 @@ dev.off()
 NOTE: we can report differencesin time and size at metamorphosis but *we can not interpret it* because of the 
 differences in diet betwen generations. *therefore we can only address the effects of pCO2 WITHIN generations*
 
-  - (1) Repeated measures ANOVA
+(1) Repeated measures ANOVA (RM ANOVAs)
     
-    - F1 for experiment #2 
-    - F2 for experiment #4
+  - F1 for experiment #2 
+    
+    * all treatment low moderate and high 
+    * two treatments low v moderate for meaninful comparison to F2s
+    
+  - F2 for experiment #4
   
-  - (2) Size at metamorphosis 
+    * two treatments only
     
-    - Experiment #2 at 10 days, Experiment #4 at 14 days in age
+(2) Generalized linear mixed-effects modells (GLMMs)
+    
+  - F1 for experiment #2 
+    
+    * all treatment low moderate and high 
+    * two treatments low v moderate for meaninful comparison to F2s
+    
+  - F2 for experiment #4
+  
+    * two treatments only
+    
+(3) Size at metamorphosis 
+    
+  - F1 for experiment #2 
+  
+    * size at 10 days in age - similarly run two models for all OAs and moderate v. low
+    
+  - F2 for experiment #4  
+    
+    * size at 14 days in age
+    
+    
     
 **output folder** = '1_Survival_Growth'
 
 
-## RM ANOVA Expeirment 2
+## (1) Growth over time - RM ANOVAs
+
+### Experiment 2 (F1s)
 
 * all treatment low moderate and high
 
-```{r  RM Anova length; F1 Experiment #2 ALL}
+```{r RM ANOVA length; F1 Experiment #2 all treatment}
 
 # (1) Repeated measures ANOVA
 
@@ -521,7 +549,7 @@ lme_Exp2.emmeans.int.letters <- multcomp::cld(object = lme_Exp2.emmeans.int$emme
 
 * moderate v. low
 
-```{r  RM Anova length; F1 Experiment #2 low moderate ONLY}
+```{r RM ANOVA length; F1 Experiment #2 low v mod}
 
 # (1) Repeated measures ANOVA
 
@@ -639,7 +667,338 @@ lme_Exp2.emmeans.int.letters <- multcomp::cld(object = lme_Exp2.emmeans.int$emme
  # 10  Low pCO2       182.3 3.602  8    174.0    190.6      e
 ```
 
-```{r ANOVA end length; F1 Expeirent #2}
+### Experiment 4 (F2s)
+
+```{r RM Anova length; F2 Experiment #4}
+
+# (1) Repeated measures ANOVA
+
+Exp4_RMAnova <-  Exp4 %>%
+                    dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                    convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                    na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+
+# * summary stats
+Exp4_RMAnova %>%  group_by(Age,Larvae_pCO2) %>% get_summary_stats(Length, type = "mean_sd")
+
+
+ggqqplot(Exp4_RMAnova, "Length", ggtheme = theme_bw()) +
+  facet_grid(Age ~ Larvae_pCO2, labeller = "label_both")
+
+# * normality assumption of the data
+Exp4_RMAnova %>%  group_by(Age, Larvae_pCO2) %>% shapiro_test(Length)
+
+
+# * visualization
+bxp <- ggboxplot(
+                Exp4_RMAnova, x = "Age", y = "Length",
+                color = "Larvae_pCO2", palette = "jco"
+                )
+# * identify outliers 
+Exp4_RMAnova %>%
+  group_by(Larvae_pCO2, Age) %>%
+  identify_outliers(Length)
+
+
+
+# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
+library(nlme)
+library(rstatix)
+
+# only 4 timepoints can be run due to low power, used every 4 days 
+Exp4_RMAnova.test <- Exp4_RMAnova %>% dplyr::filter(Age %in% c(2,6,10,14))
+
+# un using anova_test from rstatix
+df_Exp4_res.aov <- anova_test(data = Exp4_RMAnova.test, 
+                              formula = Length ~ Age*Larvae_pCO2 + Error(ID/Age))
+df_Exp4_res.aov
+get_anova_table(df_Exp4_res.aov)
+#            Effect DFn DFd       F        p p<.05   ges
+# 1     Larvae_pCO2   1   4   7.329 5.40e-02       0.326
+# 2             Age   3  12 464.461 1.13e-12     * 0.988
+# 3 Larvae_pCO2:Age   3  12   0.595 6.30e-01       0.099
+
+# $`Mauchly's Test for Sphericity`  # PASS - you see the DFs below are not integrate in the table above 
+#            Effect     W     p p<.05
+# 1             Age 0.072 0.236      
+# 2 Larvae_pCO2:Age 0.072 0.236      
+# 
+# $`Sphericity Corrections`
+#            Effect   GGe     DF[GG]    p[GG] p[GG]<.05   HFe    DF[HF]    p[HF] p[HF]<.05
+# 1             Age 0.457 1.37, 5.49 1.12e-06         * 0.616 1.85, 7.4 1.91e-08         *
+# 2 Larvae_pCO2:Age 0.457 1.37, 5.49 5.24e-01           0.616 1.85, 7.4 5.64e-01         
+
+# using lme function from nlkme
+ctrl <- lmeControl(opt='optim')
+lme_Exp4.mod  <- lme(Length ~ Age * Larvae_pCO2, data=Exp4_RMAnova.test, 
+                               random = ~Age|ID,
+                               method="REML",
+                               control=ctrl
+                               )
+
+lme_Exp4.mod.aov       <- (anova(lme_Exp4.mod))
+#              numDF denDF F-value p-value
+# Age	             3	12	2997.29	<.0001
+# Larvae_pCO2      1	4	  48.94	  0.0022
+# Age:Larvae_pCO2	 3	12	3.07	  0.0689
+
+# POSTHOC TEST
+library(emmeans)
+
+lme_Exp4.emmeans.pCO2         <- emmeans(lme_Exp4.mod, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
+lme_Exp4.emmeans.pCO2.letters <- multcomp::cld(object = lme_Exp4.emmeans.pCO2$emmeans,
+                                              Letters = letters)
+ # Larvae_pCO2   emmean   SE df lower.CL upper.CL .group
+ # Moderate pCO2    146 1.46  4      142      151  a    
+ # Low pCO2         152 1.46  4      148      156  a 
+ 
+lme_Exp4.emmeans.Age         <- emmeans(lme_Exp4.mod, list(pairwise ~ Age), adjust = "tukey")
+lme_Exp4.emmeans.Age.letters <- multcomp::cld(object = lme_Exp4.emmeans.Age$emmeans,
+                                              Letters = letters)
+ # Age emmean   SE df lower.CL upper.CL .group
+ # 2      102 1.09  5     99.2      105  a    
+ # 6      129 0.78  5    126.9      131   b   
+ # 10     166 3.64  5    157.0      176    c  
+ # 14     200 1.00  5    197.2      202     d 
+
+```
+
+
+
+## (2) Growth over time - GLMMs
+
+* exmaple: glmer(DV ~ IV_1 * IV_2 + (1| random factor), data = data, family = <insert family name here>)
+
+* family 'gamma' use "inverse" for continuous DV, length is a continuous variable (not discrete, or bound 0 -1 or binary,)
+
+* Inverse Gaussian Regression (IGR) is a suitable model for modeling positively skewed response data
+
+### Experiment 2 (F1s)
+
+* all treatment low moderate and high
+
+```{r GLMMs length; F1 Experiment #2 all treatment}
+
+# (2) GLMMs 
+
+
+# (2.1) All treatment Low, moderate, and high
+Exp2_GLMMs    <-  Exp2 %>%
+                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                     convert_as_factor(ID, Larvae_pCO2, Age) %>% 
+                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+str(Exp2_GLMMs)
+
+
+
+# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
+library(nlme)
+library(lme4)
+
+hist(Exp2_GLMMs$Length)
+
+# adjust a difference in two proportions for confounders: 
+# to do so, you would run a logistic GLM with identity link.
+
+Exp2_GLMM_all <- glmer(
+                       Length ~ 
+                        Larvae_pCO2 * Age + (1 | ID), 
+                          data = Exp2_GLMMs, 
+                          Gamma(link=identity)
+                      )
+summary(Exp2_GLMM_all)
+
+car::Anova(Exp2_GLMM_all, type=3)
+
+# Analysis of Deviance Table (Type III Wald chisquare tests)
+# 
+# Response: Length
+#                   Chisq Df Pr(>Chisq)    
+# (Intercept)     632.824  1  < 2.2e-16 ***
+# Larvae_pCO2      31.097  2  1.768e-07 ***
+# Age             272.773  3  < 2.2e-16 ***
+# Larvae_pCO2:Age  87.424  6  < 2.2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+
+## posthoc for fixed effects comparisons using lsmeans
+library(lsmeans)
+library(emmeans)
+library(multcomp)
+lsm_Exp2.all.Age <- lsmeans(Exp2_GLMM_all,list(pairwise~Age),adjust="tukey")
+cld(lsm_Exp2.all.Age, Letters=letters)
+# $`pairwise differences of Age`
+#  1            estimate   SE  df z.ratio p.value
+#  Age2 - Age4     -8.91 2.50 Inf  -3.567  0.0020
+#  Age2 - Age8    -53.32 3.11 Inf -17.146  <.0001
+#  Age2 - Age10   -65.09 3.27 Inf -19.895  <.0001
+#  Age4 - Age8    -44.41 3.21 Inf -13.850  <.0001
+#  Age4 - Age10   -56.18 3.36 Inf -16.708  <.0001
+#  Age8 - Age10   -11.76 3.76 Inf  -3.130  0.0095
+
+# Age lsmean   SE  df asymp.LCL asymp.UCL .group
+#  2     86.4 2.35 Inf      81.8        91  a    
+#  4     95.3 2.48 Inf      90.5       100   b   
+#  8    139.7 2.93 Inf     134.0       145    c  
+#  10   151.5 3.14 Inf     145.4       158     d 
+
+lsm_Exp2.all.OA <- lsmeans(Exp2_GLMM_all,list(pairwise~Larvae_pCO2),adjust="tukey")
+cld(lsm_Exp2.all.OA, Letters=letters)
+# $`pairwise differences of Larvae_pCO2`
+#  1                         estimate   SE  df z.ratio p.value
+#  Low pCO2 - Moderate pCO2      7.15 4.69 Inf   1.523  0.2799
+#  Low pCO2 - High pCO2         51.67 4.59 Inf  11.254  <.0001
+#  Moderate pCO2 - High pCO2    44.52 4.55 Inf   9.776  <.0001
+
+#  Larvae_pCO2   lsmean   SE  df asymp.LCL asymp.UCL .group
+#  High pCO2       86.2 3.19 Inf      79.9      92.4  a    
+#  Moderate pCO2  130.7 3.34 Inf     124.2     137.3   b   
+#  Low pCO2       137.9 3.28 Inf     131.4     144.3   b  
+
+lsm_Exp2.all.AgeXOA <- lsmeans(Exp2_GLMM_all,list(pairwise~Larvae_pCO2:Age),adjust="tukey")
+cld(lsm_Exp2.all.AgeXOA, Letters=letters)
+ # Larvae_pCO2   Age lsmean   SE  df asymp.LCL asymp.UCL .group
+ # High pCO2     2     68.7 3.94 Inf      61.0      76.4  a    
+ # High pCO2     4     75.5 4.10 Inf      67.5      83.5  ab   
+ # Moderate pCO2 2     93.7 4.27 Inf      85.3     102.0   bc  
+ # Low pCO2      2     96.9 3.85 Inf      89.4     104.5    c  
+ # High pCO2     8     97.5 4.03 Inf      89.6     105.4    c  
+ # Moderate pCO2 4    102.6 4.51 Inf      93.7     111.4    c  
+ # High pCO2     10   103.1 4.24 Inf      94.8     111.4    c  
+ # Low pCO2      4    107.9 4.12 Inf      99.9     116.0    c  
+ # Moderate pCO2 8    157.5 5.43 Inf     146.9     168.1     d 
+ # Low pCO2      8    164.2 5.62 Inf     153.2     175.2     d 
+ # Moderate pCO2 10   169.1 5.75 Inf     157.8     180.4     d 
+ # Low pCO2      10   182.4 6.12 Inf     170.4     194.4     d 
+```
+
+* moderate v. low
+
+```{r GLMMs length; F1 Experiment #2 low v mod}
+
+
+# (2) GLMMs 
+
+
+# (2.2) Only Low v Mod
+Exp2_GLMMs_LowvMod  <- Exp2 %>%
+                     dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                     na.omit()
+str(Exp2_GLMMs_LowvMod)
+
+
+
+# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
+
+hist(Exp2_GLMMs_LowvMod$Length)
+
+Exp2_GLMM_LowvMod <- glmer(
+                       Length ~ 
+                        Larvae_pCO2 * Age + (1 | ID), 
+                          data = Exp2_GLMMs_LowvMod, 
+                          Gamma(link=identity)
+                      )
+summary(Exp2_GLMM_LowvMod)
+
+car::Anova(Exp2_GLMM_LowvMod, type=3)
+
+# Analysis of Deviance Table (Type III Wald chisquare tests)
+# 
+# Response: Length
+#                     Chisq Df Pr(>Chisq)    
+# (Intercept)     1137.5439  1    < 2e-16 ***
+# Larvae_pCO2        1.7389  1    0.18727    
+# Age             1874.2950  3    < 2e-16 ***
+# Larvae_pCO2:Age    6.3016  3    0.09782 .  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## posthoc for fixed effects comparisons using lsmeans
+library(lsmeans)
+library(emmeans)
+library(multcomp)
+lsm_Exp2.LowMod.Age <- lsmeans(Exp2_GLMM_LowvMod,list(pairwise~Age),adjust="tukey")
+cld(lsm_Exp2.LowMod.Age, Letters=letters)
+ # Age lsmean   SE  df asymp.LCL asymp.UCL .group
+ # 2     94.1 2.15 Inf      89.9      98.3  a    
+ # 4    104.1 2.18 Inf      99.8     108.3   b   
+ # 8    160.3 2.29 Inf     155.8     164.8    c  
+ # 10   175.2 2.36 Inf     170.6     179.8     d 
+```
+
+### Experiment 4 (F2s)
+
+```{r GLMMs length; F2 Experiment #4}
+
+# (2) GLMMs 
+
+
+# (2.3) F2 expeirent has only low and moderate OA treamtnets
+Exp4_GLMMs    <-  Exp4 %>%
+                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                     convert_as_factor(ID, Larvae_pCO2, Age) %>% 
+                     na.omit() 
+str(Exp4_GLMMs)
+
+
+
+# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
+
+hist(Exp4_GLMMs$Length)
+
+Exp4_GLMM <- glmer(
+                   Length ~ 
+                    Larvae_pCO2 * Age + (1 | ID), 
+                      data = Exp4_GLMMs, 
+                     # gaussian(link = "identity")
+                     Gamma(link="identity") 
+                     # Gamma(link="log") 
+                  )
+summary(Exp4_GLMM)
+
+car::Anova(Exp4_GLMM, type=3)
+
+# Analysis of Deviance Table (Type III Wald chisquare tests)
+# 
+# Response: Length
+#                     Chisq Df Pr(>Chisq)    
+# (Intercept)     4486.9890  1    < 2e-16 ***
+# Larvae_pCO2        0.9848  1    0.32102    
+# Age             2880.1057  6    < 2e-16 ***
+# Larvae_pCO2:Age   11.7444  6    0.06792 .  
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+## posthoc for fixed effects comparisons using lsmeans
+library(lsmeans)
+library(emmeans)
+library(multcomp)
+lsm_Exp4.Age <- lsmeans(Exp4_GLMM,list(pairwise~Age),adjust="tukey")
+cld(lsm_Exp4.Age, Letters=letters)
+ # Age lsmean   SE  df asymp.LCL asymp.UCL .group  
+ # 2      102 1.08 Inf      99.9       104  a      
+ # 4      109 1.12 Inf     106.4       111   b     
+ # 6      129 1.26 Inf     126.5       131    c    
+ # 8      143 1.35 Inf     140.0       145     d   
+ # 10     166 1.52 Inf     163.3       169      e  
+ # 12     181 1.62 Inf     177.4       184       f 
+ # 14     200 1.77 Inf     196.3       203        g
+```
+
+
+## (3) Size at metamorphosis - ANOVAs
+
+### Experiment 2 (F1s)
+
+* all treatment low moderate and high
+* moderate v. low
+
+```{r ANOVA end length; F1 Experiment #2 all and low v mod}
 # (2) Size at metamorphosis
 
 
@@ -734,102 +1093,9 @@ capture.output(Exp2_AOV_res.means,
 
 ```
 
-## RM ANOVA Expeirment 4
-```{r  RM Anova length; F2 Experiment #4}
+### Experiment 4 (F2s)
 
-# (1) Repeated measures ANOVA
-
-Exp4_RMAnova <-  Exp4 %>%
-                    dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
-                    convert_as_factor(ID, Age, Larvae_pCO2) %>% 
-                    na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
-
-# * summary stats
-Exp4_RMAnova %>%  group_by(Age,Larvae_pCO2) %>% get_summary_stats(Length, type = "mean_sd")
-
-
-ggqqplot(Exp4_RMAnova, "Length", ggtheme = theme_bw()) +
-  facet_grid(Age ~ Larvae_pCO2, labeller = "label_both")
-
-# * normality assumption of the data
-Exp4_RMAnova %>%  group_by(Age, Larvae_pCO2) %>% shapiro_test(Length)
-
-
-# * visualization
-bxp <- ggboxplot(
-                Exp4_RMAnova, x = "Age", y = "Length",
-                color = "Larvae_pCO2", palette = "jco"
-                )
-# * identify outliers 
-Exp4_RMAnova %>%
-  group_by(Larvae_pCO2, Age) %>%
-  identify_outliers(Length)
-
-
-
-# RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
-library(nlme)
-library(rstatix)
-
-# only 4 timepoints can be run due to low power, used every 4 days 
-Exp4_RMAnova.test <- Exp4_RMAnova %>% dplyr::filter(Age %in% c(2,6,10,14))
-
-# un using anova_test from rstatix
-df_Exp4_res.aov <- anova_test(data = Exp4_RMAnova.test, 
-                              formula = Length ~ Age*Larvae_pCO2 + Error(ID/Age))
-df_Exp4_res.aov
-get_anova_table(df_Exp4_res.aov)
-#            Effect DFn DFd       F        p p<.05   ges
-# 1     Larvae_pCO2   1   4   7.329 5.40e-02       0.326
-# 2             Age   3  12 464.461 1.13e-12     * 0.988
-# 3 Larvae_pCO2:Age   3  12   0.595 6.30e-01       0.099
-
-# $`Mauchly's Test for Sphericity`  # PASS - you see the DFs below are not integrate in the table above 
-#            Effect     W     p p<.05
-# 1             Age 0.072 0.236      
-# 2 Larvae_pCO2:Age 0.072 0.236      
-# 
-# $`Sphericity Corrections`
-#            Effect   GGe     DF[GG]    p[GG] p[GG]<.05   HFe    DF[HF]    p[HF] p[HF]<.05
-# 1             Age 0.457 1.37, 5.49 1.12e-06         * 0.616 1.85, 7.4 1.91e-08         *
-# 2 Larvae_pCO2:Age 0.457 1.37, 5.49 5.24e-01           0.616 1.85, 7.4 5.64e-01         
-
-# using lme function from nlkme
-ctrl <- lmeControl(opt='optim')
-lme_Exp4.mod  <- lme(Length ~ Age * Larvae_pCO2, data=Exp4_RMAnova.test, 
-                               random = ~Age|ID,
-                               method="REML",
-                               control=ctrl
-                               )
-
-lme_Exp4.mod.aov       <- (anova(lme_Exp4.mod))
-#              numDF denDF F-value p-value
-# Age	             3	12	2997.29	<.0001
-# Larvae_pCO2      1	4	  48.94	  0.0022
-# Age:Larvae_pCO2	 3	12	3.07	  0.0689
-
-# POSTHOC TEST
-library(emmeans)
-
-lme_Exp4.emmeans.pCO2         <- emmeans(lme_Exp4.mod, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
-lme_Exp4.emmeans.pCO2.letters <- multcomp::cld(object = lme_Exp4.emmeans.pCO2$emmeans,
-                                              Letters = letters)
- # Larvae_pCO2   emmean   SE df lower.CL upper.CL .group
- # Moderate pCO2    146 1.46  4      142      151  a    
- # Low pCO2         152 1.46  4      148      156  a 
- 
-lme_Exp4.emmeans.Age         <- emmeans(lme_Exp4.mod, list(pairwise ~ Age), adjust = "tukey")
-lme_Exp4.emmeans.Age.letters <- multcomp::cld(object = lme_Exp4.emmeans.Age$emmeans,
-                                              Letters = letters)
- # Age emmean   SE df lower.CL upper.CL .group
- # 2      102 1.09  5     99.2      105  a    
- # 6      129 0.78  5    126.9      131   b   
- # 10     166 3.64  5    157.0      176    c  
- # 14     200 1.00  5    197.2      202     d 
-
-```
-
-```{r ANOVA end length; F1 Expeirent #4}
+```{r ANOVA end length; F2 Experiment #4}
 # (2) Size at metamorphosis
 
 

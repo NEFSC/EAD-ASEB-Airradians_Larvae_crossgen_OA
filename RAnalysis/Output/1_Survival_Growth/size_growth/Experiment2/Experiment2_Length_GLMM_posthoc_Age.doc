@@ -1,0 +1,13 @@
+ Age lsmean   SE  df asymp.LCL asymp.UCL .group
+ 2     86.4 2.35 Inf      81.8        91  a    
+ 4     95.3 2.48 Inf      90.5       100   b   
+ 8    139.7 2.93 Inf     134.0       145    c  
+ 10   151.5 3.14 Inf     145.4       158     d 
+
+Results are averaged over the levels of: Larvae_pCO2 
+Confidence level used: 0.95 
+P value adjustment: tukey method for comparing a family of 4 estimates 
+significance level used: alpha = 0.05 
+NOTE: If two or more means share the same grouping symbol,
+      then we cannot show them to be different.
+      But we also did not show them to be the same. 

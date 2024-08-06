@@ -11,8 +11,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 
 ```
 
@@ -775,6 +775,7 @@ dev.off()
 ```{r  Statistics; F1 Experiment #1} 
 
 # All CO2 treatments low moderate and high
+# one way anova 
 aovMOD_Exp1 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
 shapiro.test(resid(aovMOD_Exp1)) # 0.4186 - norm
 leveneTest(aovMOD_Exp1) # 0.4478- pass
@@ -783,6 +784,14 @@ summary(aov(aovMOD_Exp1))
 #             Df Sum Sq Mean Sq F value   Pr(>F)    
 # Larvae_pCO2  2 1.5851  0.7925   127.7 2.48e-07 ***
 # Residuals    9 0.0559  0.0062
+
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
+df_Exp1 %>%
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
 
 capture.output(summary(aov(aovMOD_Exp1)),file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA.doc") 
 
@@ -811,6 +820,18 @@ summary(aov(aovMOD_Exp1_LowvMod))
 # Larvae_pCO2  1 0.003486 0.003486   1.198  0.316
 # Residuals    6 0.017456 0.002909
 
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, 
+                                 data= (df_Exp1 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
+# 1	Percent.deformed	Low pCO2	Moderate pCO2	4	4	-1.094656	3.846246	0.337
+df_Exp1 %>%
+  dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+# Percent.deformed	Low pCO2	Moderate pCO2	4	4	-1.094656	3.846246	0.337	0.337	
+
+
 capture.output(aovMOD_Exp1_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA_LowvMOD.doc") 
 
 ```
@@ -826,6 +847,20 @@ summary(aov(aovMOD_Exp2))
 #             Df Sum Sq Mean Sq F value  Pr(>F)    
 # Larvae_pCO2  2 2.0340  1.0170   665.6 2.3e-11 ***
 # Residuals   10 0.0153  0.0015
+
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
+# 1	Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	5.17e-01	5.17e-01	
+# 2	Percent.deformed	Low pCO2	High pCO2	5	4	-42.3081073	4.654956	3.36e-07	1.01e-06	
+# 3	Percent.deformed	Moderate pCO2	High pCO2	4	4	-25.8879404	5.009721	1.57e-06	3.14e-06
+df_Exp2 %>%
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	5.17e-01	1.000e+00	
+# Percent.deformed	Low pCO2	High pCO2	5	4	-42.3081073	4.654956	3.36e-07	1.008e-06	
+# Percent.deformed	Moderate pCO2	High pCO2	4	4	-25.8879404	5.009721	1.57e-06	4.710e-06
+
 
 capture.output(summary(aov(aovMOD_Exp2)),file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA.doc") 
 
@@ -855,6 +890,17 @@ summary(aov(aovMOD_Exp2_LowvMod))
 #             Df   Sum Sq  Mean Sq F value Pr(>F)
 # Larvae_pCO2  1 0.001027 0.001027   0.624  0.456
 # Residuals    7 0.011527 0.001647
+
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, 
+                                 data= (df_Exp2 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	0.517
+df_Exp2 %>%
+  dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	0.517	0.517
 
 capture.output(aovMOD_Exp2_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA_LowvMOD.doc") 
 

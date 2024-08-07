@@ -27,6 +27,7 @@ library(forcats)
 library(kableExtra) # nice Rmd tables
 library(emmeans)
 library(ggpubr)
+library(lmtest)
 ```
 
 ### Load Data as df
@@ -149,7 +150,6 @@ df_Exp6 <- df %>% filter(Expeirment=="6") # F3 - full factorial
 
 ```{r Mean table + plots; F1 Experiment #1}
 
-getwd()
 # Summarise Percent Deformities for plotting 
 # Remember - we DO NOT need the Parent_pCO2 column here - just Larvae pCO2
 Exp1_mean_deformaties <- df_Exp1 %>% 
@@ -382,7 +382,6 @@ ggarrange(
 dev.off()
 ```
 
-
 ```{r Mean table + plots; F2 Experiment #4}
 
 
@@ -496,7 +495,6 @@ ggarrange(
 )
 dev.off()
 ```
-
 
 ## Manuscript 3; Expeirment 3
 
@@ -614,7 +612,6 @@ ggarrange(
 dev.off()
 
 ```
-
 
 ## Manuscript 4; Expeirment 6
 
@@ -759,11 +756,7 @@ dev.off()
 ```
 
 
-
-
-
 # Statistics 
-
 
 
 ## Manuscript 2; Expeirments 1,2 and 4
@@ -772,7 +765,7 @@ dev.off()
 
 **about**: one way analysis only larval treatment
 
-```{r  Statistics; F1 Experiment #1} 
+```{r  Anova; F1 Experiment #1} 
 
 # All CO2 treatments low moderate and high
 # one way anova 
@@ -785,7 +778,90 @@ summary(aov(aovMOD_Exp1))
 # Larvae_pCO2  2 1.5851  0.7925   127.7 2.48e-07 ***
 # Residuals    9 0.0559  0.0062
 
-# t test
+# posthoc analysis of the one way anova
+aovMOD_Exp1_means_contr <- emmeans::emmeans(object = aovMOD_Exp1, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp1_mod_means   <- multcomp::cld(object = aovMOD_Exp1_means_contr$emmeans, 
+                                         Letters = letters) # letter display\
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+#  Low pCO2      0.0387 0.0394  9 -0.05036    0.128  a    
+#  Moderate pCO2 0.0805 0.0394  9 -0.00861    0.170  a    
+#  High pCO2     0.8297 0.0394  9  0.74064    0.919   b 
+
+
+```
+
+```{r  Beta Regression; F1 Experiment #1} 
+# run beta regression
+library(betareg)
+
+Exp1_Dstage_logit <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this - THIS IS THE DEFAULT
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp1)
+
+Exp1_Dstage_logit2 <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2 | Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this - THIS IS THE DEFAULT
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp1)
+
+lrtest(Exp1_Dstage_logit,Exp1_Dstage_logit2)
+summary(Exp1_Dstage_logit2)
+# Coefficients (mu model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               -2.8014     0.5188  -5.399 6.69e-08 ***
+# Larvae_pCO2Moderate pCO2   0.5248     0.5537   0.948    0.343    
+# Larvae_pCO2High pCO2       4.3397     0.6261   6.931 4.17e-12 ***
+
+
+# chi squared tests 
+df_Exp1.MODvHIGH <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Low pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.MODvHIGH) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Low pCO2'))$Larvae_pCO2
+ct_a <- chisq.test(df_Exp1.MODvHIGH)
+ct_a <- tidy(ct_a)
+ct_a$comparison <- "moderate v high"
+
+df_Exp1.LOWvHIGH <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Moderate pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.LOWvHIGH) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Moderate pCO2'))$Larvae_pCO2
+ct_b <- chisq.test(df_Exp1.LOWvHIGH)
+ct_b <- tidy(ct_b)
+ct_b$comparison <- "low v high"
+
+df_Exp1.LOWvMOD <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'High pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.LOWvMOD) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'High pCO2'))$Larvae_pCO2
+ct_c <- chisq.test(df_Exp1.LOWvMOD)
+ct_c <- tidy(ct_c)
+ct_c$comparison <- "low v moderate"
+
+ct <- rbind(ct_a, ct_b, ct_c)
+ct$adj.p.value <- p.adjust(ct$p.value)
+
+# run proprtion z tests 
+Exp1_Low.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'Low pCO2'))$Percent.deformed
+Exp1_Mod.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'Moderate pCO2'))$Percent.deformed
+Exp1_High.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'High pCO2'))$Percent.deformed
+
+res.LOWvMOD <- prop.test(x = Exp1_Low.data, n = Exp1_Mod.data,
+                         p = NULL, alternative = "two.sided", correct = TRUE)
+
+res.LOWvHIGH <- prop.test(x = Exp1_Low.data, n = Exp1_High.data,
+                         p = NULL, alternative = "two.sided", correct = TRUE)
+# data:  Exp1_Low.data out of Exp1_High.data
+# X-squared = 0.078509, df = 3, p-value = 0.9943
+
+# run t tests
 t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
 df_Exp1 %>%
   t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
@@ -793,50 +869,27 @@ df_Exp1 %>%
   add_significance("p.adj")
 
 
-capture.output(summary(aov(aovMOD_Exp1)),file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA.doc") 
-
-
-aovMOD_Exp1_means_contr <- emmeans::emmeans(object = aovMOD_Exp1, # run tukey
-                                    pairwise ~ "Larvae_pCO2",
-                                    adjust = "tukey")
-aovMOD_Exp1_mod_means   <- multcomp::cld(object = aovMOD_Exp1_means_contr$emmeans, Letters = letters) # letter display\
-
-# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
-#  Low pCO2      0.0387 0.0394  9 -0.05036    0.128  a    
-#  Moderate pCO2 0.0805 0.0394  9 -0.00861    0.170  a    
-#  High pCO2     0.8297 0.0394  9  0.74064    0.919   b 
-
-capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_TukeyHSD.doc") 
-
-
-
-# Just moderate and high to comapre to the F2 experiment (Exp 4)
-aovMOD_Exp1_LowvMod <- lm(Percent.deformed ~ Larvae_pCO2, 
-                          data= (df_Exp1 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
-shapiro.test(resid(aovMOD_Exp1_LowvMod)) # 0.2501 - norm
-leveneTest(aovMOD_Exp1_LowvMod) # 0.2707- pass
-summary(aov(aovMOD_Exp1_LowvMod))
-#             Df   Sum Sq  Mean Sq F value Pr(>F)
-# Larvae_pCO2  1 0.003486 0.003486   1.198  0.316
-# Residuals    6 0.017456 0.002909
-
-# t test
-t_test(Percent.deformed ~ Larvae_pCO2, 
-                                 data= (df_Exp1 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
-# 1	Percent.deformed	Low pCO2	Moderate pCO2	4	4	-1.094656	3.846246	0.337
-df_Exp1 %>%
-  dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
-  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance("p.adj")
-# Percent.deformed	Low pCO2	Moderate pCO2	4	4	-1.094656	3.846246	0.337	0.337	
-
-
-capture.output(aovMOD_Exp1_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA_LowvMOD.doc") 
 
 ```
 
-```{r  Statistics; F1 Experiment #2} 
+```{r  output stats; F1 Experiment #1} 
+#output
+
+## beta
+capture.output(
+  print(summary(F1_Dstage_BetaReg, type = "quantile")),
+  file="Output/2_Dstage_Shell_Abnormalities/Experiment1_BetaRegression.doc") 
+
+## anova
+capture.output(summary(aov(aovMOD_Exp1)),file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA.doc") 
+
+## posthoc anova
+capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_TukeyHSD.doc") 
+
+```
+
+
+```{r  Anova; F1 Experiment #2} 
 
 # All CO2 treatments low moderate and high
 aovMOD_Exp2 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
@@ -847,6 +900,76 @@ summary(aov(aovMOD_Exp2))
 #             Df Sum Sq Mean Sq F value  Pr(>F)    
 # Larvae_pCO2  2 2.0340  1.0170   665.6 2.3e-11 ***
 # Residuals   10 0.0153  0.0015
+
+aovMOD_Exp2_means_contr <- emmeans::emmeans(object = aovMOD_Exp2, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp2_mod_means   <- multcomp::cld(object = aovMOD_Exp2_means_contr$emmeans, Letters = letters) # letter display\
+
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+# Moderate pCO2 0.0405 0.0195 10 -0.00305    0.084  a    
+# Low pCO2      0.0620 0.0175 10  0.02305    0.101  a    
+# High pCO2     0.9093 0.0195 10  0.86570    0.953   b
+ 
+
+```
+
+
+```{r  Beta regression; F1 Experiment #2} }
+# run beta regression
+library(betareg)
+# link(linkname) specifies the link function used for the conditional mean.
+# The Complimentary Log-Log (cloglog) link is another example of using an inverse cumulative distribution function to transform the target. It differs from logit and probit function because it is asymmetric. It works best when the chance of an event is extremely low or extremely high
+# good link below: 
+# https://knowledge.alteryx.com/index/s/article/Selecting-a-Logistic-Regression-Model-Type-Logit-Probit-or-Cloglog-1583460917464
+
+
+# IMPORTNAT - here we have to transform the data becase y assumes either 0 or 1, i our case 
+# we have two cases of a 0, we canuse the queation: 
+# stated  on page 3 in btareg https://cran.r-project.org/web/packages/betareg/vignettes/betareg.pdf
+# citing the authors (Smithson and Verkuilen 2006).
+
+df_Exp2_OM <- df_Exp2 %>% 
+                          dplyr::select(Percent.deformed, Larvae_pCO2)  %>%  
+                          na.omit() %>% 
+                          dplyr::mutate(Percent.deformed = # 3 is the number of samples in this data
+                              (Percent.deformed * (13 - 1) + 0.5) / 13 # Smithson and Verkuilen 2006
+                          )
+
+Exp2_Dstage_logit <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                               # link = "loglog",
+                               # link = "probit",
+                               # link = "cloglog",
+                               # link = "logit", # THIS IS THE DEFAULT
+                             data=df_Exp2_OM
+                             )
+Exp2_Dstage_logit
+
+
+
+Exp2_Dstage_logit2 <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2 | Larvae_pCO2,
+                               # link = "loglog",
+                               # link = "probit",
+                               # link = "cloglog",
+                               # link = "logit", # THIS IS THE DEFAULT
+                             data=df_Exp2_OM
+                             )
+lrtest(Exp2_Dstage_logit, Exp2_Dstage_logit2)
+  
+
+summary(Exp2_Dstage_logit)
+# Default model using the Smithson and Verkuilen 2006 transformation for 0s
+# Coefficients (mean model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               -2.2081     0.1606 -13.746   <2e-16 ***
+# Larvae_pCO2Moderate pCO2  -0.3768     0.2603  -1.448    0.148    
+# Larvae_pCO2High pCO2       4.1679     0.2306  18.070   <2e-16 ***
+  
+
+
+
 
 # t test
 t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
@@ -862,20 +985,19 @@ df_Exp2 %>%
 # Percent.deformed	Moderate pCO2	High pCO2	4	4	-25.8879404	5.009721	1.57e-06	4.710e-06
 
 
+
+
+# outputs
+
+## anova
 capture.output(summary(aov(aovMOD_Exp2)),file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA.doc") 
 
-
-aovMOD_Exp2_means_contr <- emmeans::emmeans(object = aovMOD_Exp2, # run tukey
-                                    pairwise ~ "Larvae_pCO2",
-                                    adjust = "tukey")
-aovMOD_Exp2_mod_means   <- multcomp::cld(object = aovMOD_Exp2_means_contr$emmeans, Letters = letters) # letter display\
-
-# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
-# Moderate pCO2 0.0405 0.0195 10 -0.00305    0.084  a    
-# Low pCO2      0.0620 0.0175 10  0.02305    0.101  a    
-# High pCO2     0.9093 0.0195 10  0.86570    0.953   b
- 
+## posthoc for anova 
 capture.output(aovMOD_Exp2_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_TukeyHSD.doc") 
+
+## betareg
+capture.output(summary(Exp2_Dstage_BetaReg, 
+                       type = "pearson"),file="Output/2_Dstage_Shell_Abnormalities/Experiment2_BetaRegression.doc") 
 
 
 # Just moderate and high to comapre to the F2 experiment (Exp 4)
@@ -917,7 +1039,26 @@ summary(aov(aovMOD_Exp4))
 # Larvae_pCO2  1 0.000337 0.000337   0.085  0.785
 # Residuals    4 0.015838 0.003960
 
-# no effect, no Tukey needed
+
+# run beta regression
+library(betareg)
+Exp4_Dstage_BetaReg <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp4
+                             )
+summary(Exp4_Dstage_BetaReg, type = "pearson")  # same exact outomce without this
+summary(Exp4_Dstage_BetaReg, type = "quantile")  # same exact outomce without this
+# Coefficients (mean model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)              -2.23013    0.30643  -7.278 3.39e-13 ***
+# Larvae_pCO2Moderate pCO2  0.03702    0.41964   0.088     0.93  
+
+
+# output 
+
+## anova - no effect
 capture.output(summary(aov(aovMOD_Exp4)),file="Output/2_Dstage_Shell_Abnormalities/Experiment4_ANOVA.doc") 
 
 ```

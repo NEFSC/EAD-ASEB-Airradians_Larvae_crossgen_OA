@@ -12,8 +12,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 
@@ -812,25 +812,77 @@ str(Exp2_GLMMs)
 # RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
 library(nlme)
 library(lme4)
+library(lmerTest) # otherwise lme4 does not report table
 
 hist(Exp2_GLMMs$Length)
 
 # adjust a difference in two proportions for confounders: 
 # to do so, you would run a logistic GLM with identity link.
-?glmer
+
+# GLMM
 Exp2_GLMM_all <- glmer(
                        Length ~ 
                         Larvae_pCO2 * Age + (1 | ID), 
                           data = Exp2_GLMMs, 
                           Gamma(link="identity")
                       )
-fitLMM = lmer(
+
+anova(Exp2_GLMM_all)
+
+car::Anova(Exp2_GLMM_all, type=3)
+
+# Analysis of Deviance Table (Type III Wald chisquare tests)
+# 
+# Response: Length
+#                   Chisq Df Pr(>Chisq)    
+# (Intercept)     632.824  1  < 2.2e-16 ***
+# Larvae_pCO2      31.097  2  1.768e-07 ***
+# Age             272.773  3  < 2.2e-16 ***
+# Larvae_pCO2:Age  87.424  6  < 2.2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+# LMM via lme4 and nlme
+Exp2_LMM.lme4 <- lme4::lmer(
               Length ~ 
                 Larvae_pCO2 * Age + (1 | ID), 
-                          data = Exp2_GLMMs
+                          data = Exp2_GLMMs,
+              )
+anova(Exp2_LMM.lme4)
+#                 npar Sum Sq Mean Sq F value
+# Larvae_pCO2        2  11243  5621.7  78.477
+# Age                3  44134 14711.4 205.366
+# Larvae_pCO2:Age    6   4788   798.0  11.140
+
+Exp2_LMM.nlme <- nlme::lme(
+              Length ~ 
+                Larvae_pCO2 * Age,
+              random=~1|ID, 
+              data = Exp2_GLMMs
               )
 
-summary(Exp2_GLMM_all)
+anova(Exp2_LMM.nlme)
+#             numDF denDF F-value p-value
+# (Intercept)	    1	32	4642.294 <.0001
+# Larvae_pCO2	    2 12	78.477	 <.0001
+# Age	            3	32	205.366	 <.0001
+# Larvae_pCO2:Age	6	32	11.140	 <.0001
+
+
+# AIC 
+anova(Exp2_LMM.lme4,Exp2_GLMM_all) # RUN AIC to investigate the best fit model
+# Data: Exp2_GLMMs
+# Models:
+# Exp2_LMM_all: Length ~ Larvae_pCO2 * Age + (1 | ID)
+# Exp2_GLMM_all: Length ~ Larvae_pCO2 * Age + (1 | ID)
+#               npar    AIC    BIC  logLik deviance Chisq Df Pr(>Chisq)
+# Exp2_LMM_all    14 425.95 454.31 -198.98   397.95                    
+# Exp2_GLMM_all   14 429.70 458.06 -200.85   401.70     0  0 
+429.70  - 425.95 # 3.75 in favor of LMM, if model is 2 AIC units less it is determine as sig better model
+
+
+
 
 # check the distribution of residuals 
 simulationOutput <- simulateResiduals(fittedModel = Exp2_GLMM_all, use.u = T)
@@ -845,20 +897,6 @@ plot(residuals)
 dev.off()
 
 
-# output th etable 
-
-car::Anova(Exp2_GLMM_all, type=3)
-
-# Analysis of Deviance Table (Type III Wald chisquare tests)
-# 
-# Response: Length
-#                   Chisq Df Pr(>Chisq)    
-# (Intercept)     632.824  1  < 2.2e-16 ***
-# Larvae_pCO2      31.097  2  1.768e-07 ***
-# Age             272.773  3  < 2.2e-16 ***
-# Larvae_pCO2:Age  87.424  6  < 2.2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 
 
@@ -1027,18 +1065,6 @@ Exp4_GLMM <- glmer(
                   )
 summary(Exp4_GLMM)
 
-# check the distribution of residuals 
-simulationOutput <- simulateResiduals(fittedModel = Exp2_GLMM_LowvMod, use.u = T)
-residuals        <- residuals(Exp2_GLMM_LowvMod, type = "response", retype="normalized")
-
-pdf(file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_Length_GLMM_QQ_Resid.pdf", height = 4, width = 7)
-plot(simulationOutput)
-dev.off()
-
-pdf(file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_Length_GLMM_Resid.pdf", height = 5, width = 5)
-plot(residuals)
-dev.off()
-
 # output the anova table 
 car::Anova(Exp4_GLMM, type=3)
 
@@ -1052,6 +1078,60 @@ car::Anova(Exp4_GLMM, type=3)
 # Larvae_pCO2:Age   11.7444  6    0.06792 .  
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+
+# LMM via lme4 and nlme
+Exp4_LMM.lme4 <- lme4::lmer(
+              Length ~ 
+                Larvae_pCO2 * Age + (1 | ID), 
+                          data = Exp4_GLMMs,
+              )
+anova(Exp4_LMM.lme4)
+#                 npar Sum Sq Mean Sq  F value
+# Larvae_pCO2        1    166   165.9  11.1334
+# Age                6  48733  8122.2 545.0616
+# Larvae_pCO2:Age    6    112    18.7   1.2575
+
+Exp4_LMM.nlme <- nlme::lme(
+              Length ~ 
+                Larvae_pCO2 * Age,
+              random=~1|ID, 
+              data = Exp4_GLMMs
+              )
+
+anova(Exp4_LMM.nlme)
+#             numDF denDF F-value p-value
+# (Intercept)	    1	24	31859.36	<.0001
+# Larvae_pCO2	    1	4	  11.13	    0.0289
+# Age	            6	24	545.06	  <.0001
+# Larvae_pCO2:Age	6	24	1.26	    0.3134
+
+
+# AIC 
+anova(Exp4_LMM.lme4,Exp4_GLMM) # RUN AIC to investigate the best fit model
+# Data: Exp4_GLMMs
+# Models:
+# Exp4_LMM.lme4: Length ~ Larvae_pCO2 * Age + (1 | ID)
+# Exp4_GLMM: Length ~ Larvae_pCO2 * Age + (1 | ID)
+#               npar    AIC    BIC  logLik deviance  Chisq Df Pr(>Chisq)
+# Exp4_LMM.lme4   16 251.51 279.31 -109.75   219.51                     
+# Exp4_GLMM       16 244.96 272.76 -106.48   212.96 6.5483  0    
+251.51    - 244.96   # 6.55 in favor of GLMM, model
+
+
+# check the distribution of residuals 
+simulationOutput <- simulateResiduals(fittedModel = Exp2_GLMM_LowvMod, use.u = T)
+residuals        <- residuals(Exp2_GLMM_LowvMod, type = "response", retype="normalized")
+
+pdf(file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_Length_GLMM_QQ_Resid.pdf", height = 4, width = 7)
+plot(simulationOutput)
+dev.off()
+
+pdf(file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_Length_GLMM_Resid.pdf", height = 5, width = 5)
+plot(residuals)
+dev.off()
+
 
 
 ## posthoc for fixed effects comparisons using lsmeans

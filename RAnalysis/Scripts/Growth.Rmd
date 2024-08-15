@@ -956,13 +956,24 @@ cld(lsm_Exp2.all.AgeXOA, Letters=letters)
 library(lsmeans)
 library(emmeans)
 library(multcomp)
-lsm_Exp2.LMM.Age <- lsmeans(Exp2_LMM.lme4,list(pairwise~Age),adjust="tukey")
+lsm_Exp2.LMM.Age <- lsmeans(Exp2_LMM.nlme,list(pairwise~Age),adjust="tukey") # does the Tukey Kramer
 cld(lsm_Exp2.LMM.Age, Letters=letters)
- # Age lsmean   SE   df lower.CL upper.CL .group
- # 2     86.4 2.77 38.5     80.8       92  a    
- # 4     95.4 2.77 38.5     89.8      101  a    
- # 8    140.1 2.57 36.1    134.8      145   b   
- # 10   152.2 2.57 36.1    147.0      157    c
+ # Age lsmean   SE df lower.CL upper.CL .group
+ # 2     86.4 2.76 12     80.4     92.4  a    
+ # 4     95.4 2.76 12     89.4    101.4  a    
+ # 8    140.1 2.57 12    134.5    145.7   b   
+ # 10   152.2 2.57 12    146.6    157.8    c  
+
+emm_Exp2.LMM.Age <- emmeans(Exp2_LMM.nlme, 
+                                  pairwise ~ "Age",
+                                    adjust = "tukey") # does the Tukey Kramer
+cld(emm_Exp2.LMM.Age, Letters=letters)
+ # Age emmean   SE df lower.CL upper.CL .group
+ # 2     86.4 2.76 12     80.4     92.4  a    
+ # 4     95.4 2.76 12     89.4    101.4  a    
+ # 8    140.1 2.57 12    134.5    145.7   b   
+ # 10   152.2 2.57 12    146.6    157.8    c  
+
 lsm_Exp2.LMM.OA <- lsmeans(Exp2_LMM.lme4,list(pairwise~Larvae_pCO2),adjust="tukey")
 cld(lsm_Exp2.LMM.OA, Letters=letters)
  # Larvae_pCO2   lsmean   SE   df lower.CL upper.CL .group
@@ -1230,18 +1241,19 @@ capture.output(cld(lsm_Exp2.LowMod.Age, Letters=letters),file="Output/1_Survival
 * all treatment low moderate and high
 * moderate v. low
 
-```{r ANOVA end length; F1 Experiment #2 all and low v mod}
-# (2) Size at metamorphosis
+```{r ANOVA and T-test metamorphosis; F1 Experiment #2 all and low v mod}
+# Size at metamorphosis
 
+# NOTE: one way test using three groups in the 2.1 ANOVA IS CORRECT
+# Note: one way test using two groups the t test is more approporate  - 2.2 T TEST IS CORRECT
 
-# (2.1) All treatment Low, moderate, and high
-Exp2_Anova <-  Exp2 %>%
+Exp2_metamorphosis <-  Exp2 %>%
                     dplyr::filter(Age %in% 10) %>% 
                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
-Exp2endsize_summ <- summarySE(Exp2_Anova, measurevar="Length", groupvars=c("Age", "Larvae_pCO2"))
+Exp2endsize_summ <- summarySE(Exp2_metamorphosis, measurevar="Length", groupvars=c("Age", "Larvae_pCO2"))
 
 # 10	Low pCO2	5	182.320	7.215404	3.226827	8.959107
 # 10	Moderate pCO2	5	169.334	8.812167	3.940921	10.941750
@@ -1250,8 +1262,12 @@ Exp2endsize_summ <- summarySE(Exp2_Anova, measurevar="Length", groupvars=c("Age"
 
 ((182.320 - 169.334)/ 182.320) *100 # 7.122642 % larger under 
 
+
+
+# (2.1) All treatment Low, moderate, and high
+
 # * run one way anova 
-Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_Anova)
+Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_metamorphosis)
 
 # * check model assumptions 
 shapiro.test(resid(Exp2_AOV_res.mod)) # 0.9314
@@ -1283,18 +1299,18 @@ capture.output(Exp2_AOV_res.means,
 
 
 # (2.2) Trancate data to just Low and Moderate 
-Exp2_Anova <-  Exp2 %>%
-                    dplyr::filter(Age %in% 10) %>% 
-                    dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% # omit high run for low vs. mod
-                    dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
-                    convert_as_factor(ID, Age, Larvae_pCO2) %>% 
-                    na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+Exp2_metamorphosis_LvM <-  Exp2 %>%
+                            dplyr::filter(Age %in% 10) %>% 
+                            dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% # omit high run for low vs. mod
+                            dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                            convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                            na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
-write.csv(Exp2_Anova,
+write.csv(Exp2_metamorphosis_LvM,
                file="Output/1_Survival_Growth/size_growth/Experiment2/Experiment2_MeanLength_metamorphosisLowvMod.csv") 
 
 # * run one way anova 
-Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_Anova)
+Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_metamorphosis_LvM)
 
 # * check model assumptions 
 shapiro.test(resid(Exp2_AOV_res.mod)) # 0.8102
@@ -1323,16 +1339,35 @@ capture.output(Exp2_AOV_res.means,
                file="Output/1_Survival_Growth/size_growth/Experiment2/Experiment2_Length_metamorphosis_posthoc_LowvMod.doc") 
 
 
+# T test
+# asusmptions , data is normal, model variance is equal
+
+# data are norm dist ? YES
+shapiro.test(Exp2_metamorphosis_LvM$Length)[[2]] # 0.8834981
+
+# equal variance ? YES
+var.test(Exp2_metamorphosis_LvM$Length~ 
+                     as.numeric(as.factor(Exp2_metamorphosis_LvM$Larvae_pCO2)))[[3]] # 0.7078991
+        
+# run the model
+Exp2_Ttest_mod <- t.test( as.numeric(as.factor(Exp2_metamorphosis_LvM$Larvae_pCO2)) , 
+                         Exp2_metamorphosis_LvM$Length, 
+                          var.equal = TRUE) # because of tests above
+# output important data
+library(purrr)
+purrr::map_df(list(Exp2_Ttest_mod), tidy)[4:6] # Tstatistic, p vaue, DF
+# -53.85676	2.401214e-21	18
+
 ```
 
 ### Experiment 4 (F2s)
 
-```{r ANOVA end length; F2 Experiment #4}
-# (2) Size at metamorphosis
+```{r ANOVA and T-test metamorphosis; F2 Experiment #4}
+# Size at metamorphosis
 
-
+# NOTE: one way test using two groups, the t test is more approporate here
 # All treatment Low and moderate
-Exp4_Anova <-  Exp4 %>%
+Exp4_metamorphosis <-  Exp4 %>%
                     dplyr::filter(Age %in% 10) %>% 
                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
@@ -1342,9 +1377,8 @@ write.csv(Exp4_Anova,
                file="Output/1_Survival_Growth/size_growth/Experiment4/Experiment4_MeanLength_metamorphosisLowvMod.csv") 
 
 
-
 # * run one way anova 
-Exp4_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp4_Anova)
+Exp4_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp4_metamorphosis)
 
 # * check model assumptions 
 shapiro.test(resid(Exp4_AOV_res.mod)) # 0.2569
@@ -1360,6 +1394,28 @@ capture.output(summary(aov(Exp4_AOV_res.mod)),
                file="Output/1_Survival_Growth/size_growth/Experiment4_Length_metamorphosis_anova.doc") 
 
 
+# T test
+# asusmptions , data is normal, model variance is equal
+
+# data are norm dist ? YES
+shapiro.test(Exp4_metamorphosis$Length)[[2]] # 0.1992734
+
+# equal variance ? YES
+var.test(Exp4_metamorphosis$Length~ 
+                     as.numeric(as.factor(Exp4_metamorphosis$Larvae_pCO2)))[[3]] # 0.4875707
+        
+# run the model
+Exp4_Ttest_mod <- t.test( as.numeric(as.factor(Exp4_metamorphosis$Larvae_pCO2)) , 
+                         Exp4_metamorphosis$Length, 
+                          var.equal = TRUE) # because of tests above
+# output important data
+library(purrr)
+purrr::map_df(list(Exp4_Ttest_mod), tidy)[4:6] # Tstatistic, p vaue, DF
+# -43.55171	9.785468e-13	10	
+
+
+Rmisc::summarySE(Exp4_metamorphosis, measurevar="Length", groupvars="Larvae_pCO2")
+((170.6000 - 162.0333) / 170.6000)*100 # 5.021512
 ```
 
 

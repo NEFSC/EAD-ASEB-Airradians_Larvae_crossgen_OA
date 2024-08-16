@@ -765,8 +765,11 @@ dev.off()
 
 **about**: one way analysis only larval treatment
 
-```{r  Anova; F1 Experiment #1} 
+* Experiment 1 - may not use these F1 data, short trial larvae died therafter..
+```{r  Anova Kruskal Wallis; F1 Experiment #1} 
 
+# One -way ANOVA 
+# NOTE: balanced design here, HOWEVER this trial may not be included in the MS (larvae died thereafter due to bacteria!)
 # All CO2 treatments low moderate and high
 # one way anova 
 aovMOD_Exp1 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
@@ -888,9 +891,12 @@ capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/E
 
 ```
 
+* Experiment 2 - defintiely using these F1 data, larvea reared to metamorphosis
 
-```{r  Anova; F1 Experiment #2} 
+  * note that this us unblaanced, 4, 4, 5 for treatmeents due to missingness - Kruskall Wallis non parametric
+```{r  Anova Kruskal Wallis; F1 Experiment #2} 
 
+# RUN ANOVA
 # All CO2 treatments low moderate and high
 aovMOD_Exp2 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
 shapiro.test(resid(aovMOD_Exp2)) # 0.2499 - norm
@@ -911,6 +917,35 @@ aovMOD_Exp2_mod_means   <- multcomp::cld(object = aovMOD_Exp2_means_contr$emmean
 # Low pCO2      0.0620 0.0175 10  0.02305    0.101  a    
 # High pCO2     0.9093 0.0195 10  0.86570    0.953   b
  
+
+
+# RUN KW
+kruskal.test(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
+# data:  Percent.deformed by Larvae_pCO2
+# Kruskal-Wallis chi-squared = 8.2116, df = 2, p-value = 0.01648
+?dunnTest
+dunnTest(x = df_Exp2$Percent.deformed, 
+         g = df_Exp2$Larvae_pCO2, 
+         method = dunn.test::p.adjustment.methods[c(4, 2:3, 5:8, 1)],
+         two.sided = TRUE)
+?dunnTest
+# High pCO2 - Low pCO2	2.1848464	0.028900112	0.05780022	 Marginal
+# High pCO2 - Moderate pCO2	2.7272727	0.006386023	0.01915807	Significnat
+# Low pCO2 - Moderate pCO2	0.6899515	0.490224694	0.49022469	
+library(dunn.test)
+
+dunn.test(df_Exp2$Percent.deformed, g=df_Exp2$Larvae_pCO2,
+          method=p.adjustment.methods[c(1)], 
+          kw=TRUE, label=TRUE, 
+      wrap=FALSE, table=TRUE, 
+      list=TRUE, rmc=FALSE, 
+      alpha=0.05, altp=FALSE)
+
+# List of pairwise comparisons: Z statistic (p-value)
+# -----------------------------------------------
+# High pCO2 - Low pCO2      :  2.184846 (0.0145)*
+# High pCO2 - Moderate pCO2 :  2.727272 (0.0032)*
+# Low pCO2 - Moderate pCO2  :  0.689951 (0.2451)
 
 ```
 
@@ -1027,6 +1062,9 @@ df_Exp2 %>%
 capture.output(aovMOD_Exp2_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA_LowvMOD.doc") 
 
 ```
+
+
+* Expeirment 4 F2 data, T test is most appropriate here
 
 ```{r  Statistics; F2 Experiment #4} 
 

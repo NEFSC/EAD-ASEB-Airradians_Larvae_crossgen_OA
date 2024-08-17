@@ -1068,6 +1068,7 @@ capture.output(aovMOD_Exp2_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Exp
 
 ```{r  Statistics; F2 Experiment #4} 
 
+# ANOVA first
 aovMOD_Exp4 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp4)
 shapiro.test(resid(aovMOD_Exp4)) # 0.2875 - norm
 leveneTest(aovMOD_Exp4) # 0.5552- pass
@@ -1094,6 +1095,25 @@ summary(Exp4_Dstage_BetaReg, type = "quantile")  # same exact outomce without th
 # Larvae_pCO2Moderate pCO2  0.03702    0.41964   0.088     0.93  
 
 
+# T-test 
+
+# normality Shapiro Wilk
+(df_Exp4 %>% 
+        group_by(as.factor(Larvae_pCO2)) %>% 
+        rstatix::shapiro_test(Percent.deformed))
+# Low pCO2	Percent.deformed	0.7714106		# low pCO2 non normal!
+# Moderate pCO2	Percent.deformed	0.9003712	0.38668421		            
+
+# equal variance 
+(df_Exp4 %>% 
+    rstatix::levene_test(Percent.deformed ~ as.factor(Larvae_pCO2)))$p[1] # 0.5552307 pass variance
+
+# we gotta run the Wilkcox! non normal under low pCO2!  
+wilcox.test(df_Exp4$Percent.deformed ~ (as.factor(df_Exp4$Larvae_pCO2)))
+# Wilcoxon rank sum exact test
+# data:  df_Exp4$Percent.deformed by as.factor(df_Exp4$Larvae_pCO2)
+# W = 4, p-value = 1
+?wilcox.test
 # output 
 
 ## anova - no effect

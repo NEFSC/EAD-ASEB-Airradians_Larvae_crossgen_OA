@@ -38,7 +38,7 @@ library(ggpubr)
 
 # LOAD DATA :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 # 8.16/2025 shannon assembled a means and SD dataset for the DIC+TA to calculate 
-CarbChem_Meseck_menas <- read.csv(file="Data/Seawater_chemistry/raw/Seawater_Chemsitry_means_Meseck_20240816.csv", 
+CarbChem_Meseck_means <- read.csv(file="Data/Seawater_chemistry/raw/Seawater_Chemsitry_means_Meseck_20240816.csv", 
                                   header=TRUE) # load the chem data
 # This is all the data, we can back calculate to get to what Shannon assembled or just use the one above..
 # if we come toa conclusion that TA+pH or pH+DIC is desired than we can do that
@@ -67,7 +67,7 @@ CarbChem_all <- read.csv(file="Data/Seawater_chemistry/raw/Seawater_Chemsitry_ra
 CarbChem_all - contains the chemistry for all larval periods, note the generation and the run #s 
 the manuscript on F1 and F2 larvae used experiment #s 2 and 4
 
-```{r master files}
+```{r CarbChem_all long format master file}
 
 # Filter for experiment 2 and 4
 CarbChem_Exp2_Exp4 <- CarbChem_all %>% dplyr::filter(Run == c(2,4))
@@ -112,6 +112,75 @@ CarbChem_Exp2_Exp4_means.by.day$pCO2_treatment <-
 
 ```
 
+
+```{r CarbChem_Meseck_means long format master file}
+
+# Filter for experiment 2 and 4
+# no need to filter, this sheet is specifically catered to experiments 2 and 4 ONLY
+names(CarbChem_Meseck_means)
+# call columns with TADIC in the column name - these are the CO2sys calculated values 
+CarbChem_Meseck_means_select <- CarbChem_Meseck_means[,c(1:14)]
+
+# long format by group 
+CarbChem_Meseck_means_long <- CarbChem_Meseck_means_select %>% 
+                          melt(id.vars=c('Age_dpf', 'Generation', 'Larvae_OA')) %>% 
+                          na.omit() #%>% 
+                          # dplyr::mutate(Date = 
+                          #                 as.POSIXct(Date, format = "%m/%d/%Y"),
+                          #               Month = months(Date),
+                          #               Year  = lubridate::year(Date)) 
+
+CarbChem_Meseck_means_long$value <- as.numeric(CarbChem_Meseck_means_long$value) # make numeric
+
+# MEANS PER SAMPLING DAY (reducing replicates within treatment to one mean) 
+# aquire means by group for mean SE plotting by Date and treamtent
+# View(CarbChem_Meseck_means_long)
+CarbChem_Meseck_means.by.day <- CarbChem_Meseck_means_long %>% # calc means and standard error
+                             dplyr::group_by(Age_dpf, Generation, Larvae_OA, variable) %>% 
+                             dplyr::summarise(mean = mean(value)) %>%  # already calculates, no need for SD or SE
+                                              # sd   = sd(value),
+                                              # se   = sd/(sqrt(n())), 
+                                              # n = n()) %>% 
+                              dplyr::rename(pCO2_treatment = Larvae_OA) %>% 
+                            dplyr::mutate(pCO2_treatment = 
+                                            case_when(
+                                                      pCO2_treatment %in% 'low' ~ 'Low',
+                                                      pCO2_treatment %in% 'moderate' ~ 'Moderate',
+                                                      pCO2_treatment %in% 'high' ~ 'High',
+                                                      TRUE ~ as.factor(pCO2_treatment)
+                                            ),
+                                          #%>% 
+                                        Date = 
+                                           case_when(
+                                                   Generation %in%  'F1' & Age_dpf == 0 ~ '2021-07-26',
+                                                   Generation %in%  'F1' & Age_dpf == 4 ~ "2021-07-30",
+                                                   Generation %in%  'F1' & Age_dpf == 8 ~ "2021-08-03",
+                                                   Generation %in%  'F1' & Age_dpf == 10 ~ "2021-08-05",
+                                                   Generation %in%  'F1' & Age_dpf == 14 ~ "2021-08-09",
+                                                   
+                                                   Generation %in%  'F2' & Age_dpf == 0 ~ '2022-08-16',
+                                                   Generation %in%  'F2' & Age_dpf == 2 ~ "2022-08-18",
+                                                   Generation %in%  'F2' & Age_dpf == 4 ~ "2022-08-20",
+                                                   Generation %in%  'F2' & Age_dpf == 6 ~ "2022-08-22",
+                                                   Generation %in%  'F2' & Age_dpf == 8 ~ "2022-08-24",
+                                                   Generation %in%  'F2' & Age_dpf == 11 ~ "2022-08-27",
+                                                   Generation %in%  'F2' & Age_dpf == 14 ~ "2022-08-30"
+                                                 ),
+                                        Date = 
+                                           as.POSIXct(Date, format = "%Y-%m-%d"),
+                                         Month = months(Date),
+                                         Year  = lubridate::year(Date) 
+                                        )
+                            
+CarbChem_Meseck_means.by.day$pCO2_treatment <-
+  forcats::fct_relevel(CarbChem_Meseck_means.by.day$pCO2_treatment,c("Low","Moderate","High"))                           
+# Note there are quite a few dates that have only a signle same for that day...
+
+
+```
+
+
+# R fxns smooth with GAM!
 ```{r SmoothRibbon function with gam}
 # how do we get smooth geom ribbon figures
 # in summary run gam and use a fine scale for x axis 
@@ -335,10 +404,25 @@ print(p)
 }
 ```
 
-* USe Smooth Ribbon and GAM to make some narly plots!
-```{r F1 three OA treamtents - Nice plots!}
+
+
+* Use Smooth Ribbon and GAM to make some narly plots!
+
+  * CarbChem_Exp2_Exp4_means.by.day, F1 (FRom Chem all)
+```{r CarbChem_all, F1 three OA treamtents - Nice plots!}
 library(ggpubr)
-carbchem.MEANS.by.day.F1 <- CarbChem_Exp2_Exp4_means.by.day %>% filter(Generation %in% 'F1') 
+unique(carbchem.MEANS.by.day.F1$Date)
+
+carbchem.MEANS.by.day.F1 <- CarbChem_Exp2_Exp4_means.by.day %>% 
+                                    filter(Generation %in% 'F1') #%>% 
+                                # dplyr::mutate(Age_dpf = 
+                                #                 case_when(
+                                #                   Date == '2021-07-26 EDT' ~ 0,
+                                #                   Date == "2021-07-30 EDT" ~ 4,
+                                #                   Date == "2021-08-03 EDT" ~ 8,
+                                #                   Date == "2021-08-05 EDT" ~ 10,
+                                #                   Date == "2021-08-09 EDT" ~ 14
+                                #                 ))
 # pdf("C:/Users/samjg/Documents/Github_repositories/Airradians_multigen_OA/RAnalysis/Output/SeawaterChemistry/F1/plots/F1_Chem_95CI.pdf", width=8, height=11)
 pdf("Output/1_Survival_Growth/Seawater_chemistry/F1_Chem_95CI.pdf", width=8, height=11)
     ggarrange(
@@ -358,8 +442,8 @@ graphics.off()
 
 ```
 
-
-```{r F2 two OA treamtents - Nice plots!}
+  * CarbChem_Exp2_Exp4_means.by.day, F2 (FRom Chem all)
+```{r CarbChem_all, F2 two OA treamtents - Nice plots!}
 
 carbchem.MEANS.by.day.F2 <- CarbChem_Exp2_Exp4_means.by.day %>% filter(Generation %in% 'F2')
 
@@ -381,34 +465,89 @@ graphics.off()
 
 ```
 
+  * CarbChem_Meseck_means.by.day, F1
+```{r CarbChem_Meseck_means, F1 three OA treamtents - Nice plots!}
+library(ggpubr)
+unique(CarbChem_Meseck_means.by.day.F1$variable)
+CarbChem_Meseck_means.by.day.F1 <- CarbChem_Meseck_means.by.day %>% 
+                                    filter(Generation %in% 'F1') #%>% 
+                                # dplyr::mutate(Age_dpf = 
+                                #                 case_when(
+                                #                   Date == '2021-07-26 EDT' ~ 0,
+                                #                   Date == "2021-07-30 EDT" ~ 4,
+                                #                   Date == "2021-08-03 EDT" ~ 8,
+                                #                   Date == "2021-08-05 EDT" ~ 10,
+                                #                   Date == "2021-08-09 EDT" ~ 14
+                                #                 ))
+# pdf("C:/Users/samjg/Documents/Github_repositories/Airradians_multigen_OA/RAnalysis/Output/SeawaterChemistry/F1/plots/F1_Chem_95CI.pdf", width=8, height=11)
+pdf("Output/1_Survival_Growth/Seawater_chemistry/F1_Chem_95CI_Meseck.pdf", width=8, height=11)
+    ggarrange(
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "toC._Bucket"),
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "Salinity"),
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "Total_alkalinity_mmol.kgSW"),
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "Total_Dissolved_inorganic_carbon_mmol.kgSW"),
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "pHmeaured"),
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "pH__Calculated"),          
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "pCO2_out_matm"),          
+          SmoothRibbon_threeOA(CarbChem_Meseck_means.by.day.F1, "WAr_out"),          
+          nrow = 4,
+          ncol = 2
+    )
+graphics.off()
 
 
-# TABLE (all data)
+```
 
-```{r use dplyr to build chemistry table, include=FALSE}
-carbchem.MASTER_MEANS <- carbchem.MASTER_long %>% # calc means and standard error
-   na.omit() %>% 
-   dplyr::group_by(Date, Type, pCO2_treatment, variable) %>% 
-   dplyr::summarise(mean = mean(value),
-                    sd   = sd(value),
-                    se   = sd/(sqrt(n())) )
+  * CarbChem_Meseck_means.by.day, F2
+```{r CarbChem_Meseck_means, F2 two OA treamtents - Nice plots!}
 
-chem_meanDate <- carbchem.MASTER_MEANS %>% 
-     na.omit() %>% 
-   dplyr::group_by(pCO2_treatment, variable) %>% 
+CarbChem_Meseck_means.by.day.F2 <- CarbChem_Meseck_means.by.day %>% filter(Generation %in% 'F2')
+
+# pdf("C:/Users/samjg/Documents/Github_repositories/Airradians_multigen_OA/RAnalysis/Output/SeawaterChemistry/F2/plots/F2_Chem_95CI.pdf", width=8, height=11)
+pdf("Output/1_Survival_Growth/Seawater_chemistry/F2_Chem_95CI_Meseck.pdf", width=8, height=11)
+    ggarrange(
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "toC._Bucket"),
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "Salinity"),
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "Total_alkalinity_mmol.kgSW"),
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "Total_Dissolved_inorganic_carbon_mmol.kgSW"),
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "pHmeaured"),
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "pH__Calculated"),          
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "pCO2_out_matm"),          
+          SmoothRibbon_twoOA(CarbChem_Meseck_means.by.day.F2, "WAr_out"),          
+          nrow = 4,
+          ncol = 2
+    )
+graphics.off()
+
+```
+
+
+
+
+# TABLE 
+
+* CarbChem_Exp2_Exp4_means.by.day
+```{r CarbChem_Exp2_Exp4_means.by.day build chemistry table, include=FALSE}
+
+Chem_means_F1_F2 <- CarbChem_Exp2_Exp4_means.by.day %>% 
+     # na.omit() %>% 
+   dplyr::group_by(Generation, pCO2_treatment, variable) %>% 
    dplyr::summarise(mean2 = mean(mean),
                     sd   = sd(mean),
                     se   = sd/(sqrt(n())) ,
                     n = n())
 
-carbchem.MASTER_wideMEANS <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="mean2")
-carbchem.MASTER_wideStErr <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="se")
-carbchem.MASTER_wideN     <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="n")
+
+carbchem.MASTER_wideMEANS <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="mean2")
+carbchem.MASTER_wideStErr <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="se")
+carbchem.MASTER_wideN     <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="n")
 
 # final table
 
 colnames(carbchem.MASTER_wideMEANS)
 FINAL_TABLE                <- data.frame(matrix(nrow = nrow(carbchem.MASTER_wideMEANS), ncol = 1))
+
+FINAL_TABLE$Generation     <- carbchem.MASTER_wideMEANS$Generation
 
 FINAL_TABLE$pCO2_Treatment <- carbchem.MASTER_wideMEANS$pCO2_treatment
 
@@ -419,13 +558,6 @@ FINAL_TABLE$Salinity       <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$pCO2           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH,
-                                     ")",
-                                     sep = "")
-
 FINAL_TABLE$Temperature    <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Temperature_bucket_C, digits=3)),
                                      (signif(carbchem.MASTER_wideStErr$Temperature_bucket_C, digits=3)), sep=" ± ")),
                                      " (",
@@ -433,27 +565,36 @@ FINAL_TABLE$Temperature    <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$T
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$pH             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pH_out, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$pH_out, digits=3)), sep=" ± ")),
+FINAL_TABLE$pCO2           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$TADIC_pCO2_out_.matm._in_situ, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$TADIC_pCO2_out_.matm._in_situ, digits=3)), sep=" ± ")),
                                      " (",
-                                     carbchem.MASTER_wideN$pH_out,
+                                     carbchem.MASTER_wideN$TADIC_pCO2_out_.matm._in_situ,
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$HCO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$HCO3_out_mmol_kgSW, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$HCO3_out_mmol_kgSW, digits=3)), sep=" ± ")),
+
+
+FINAL_TABLE$pH             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$TADIC_pH_out_in_situ, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$TADIC_pH_out_in_situ, digits=3)), sep=" ± ")),
                                      " (",
-                                     carbchem.MASTER_wideN$HCO3_out_mmol_kgSW,
+                                     carbchem.MASTER_wideN$TADIC_pH_out_in_situ,
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$CO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$CO3_out_mmol_kgSW, digits=3)),
-                                             "±",
-                                     (signif(carbchem.MASTER_wideStErr$CO3_out_mmol_kgSW, digits=3)), sep="  ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$CO3_out_mmol_kgSW,
-                                     ")",
-                                     sep = "")
+# FINAL_TABLE$HCO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$HCO3_out_mmol_kgSW, digits=3)),
+#                                      (signif(carbchem.MASTER_wideStErr$HCO3_out_mmol_kgSW, digits=3)), sep=" ± ")),
+#                                      " (",
+#                                      carbchem.MASTER_wideN$HCO3_out_mmol_kgSW,
+#                                      ")",
+#                                      sep = "")
+
+# FINAL_TABLE$CO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$CO3_out_mmol_kgSW, digits=3)),
+#                                              "±",
+#                                      (signif(carbchem.MASTER_wideStErr$CO3_out_mmol_kgSW, digits=3)), sep="  ")),
+#                                      " (",
+#                                      carbchem.MASTER_wideN$CO3_out_mmol_kgSW,
+#                                      ")",
+#                                      sep = "")
 
 FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$TA_mmol_kgSW, digits=3)),
                                      (signif(carbchem.MASTER_wideStErr$TA_mmol_kgSW, digits=3)), sep=" ± ")),
@@ -462,15 +603,124 @@ FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$T
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$Aragonite.Sat  <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$War_out_DIC_pH, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$War_out_DIC_pH, digits=3)), sep=" ± ")),
+FINAL_TABLE$DIC             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$TCO2_mmol_kgSW, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$TCO2_mmol_kgSW, digits=3)), sep=" ± ")),
                                      " (",
-                                     carbchem.MASTER_wideN$War_out_DIC_pH,
+                                     carbchem.MASTER_wideN$TCO2_mmol_kgSW,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$Aragonite.Sat  <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$TADIC_WAr_out_in_situ, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$TADIC_WAr_out_in_situ, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$TADIC_WAr_out_in_situ,
                                      ")",
                                      sep = "")
 
 FINAL_TABLE                <- FINAL_TABLE[,-1] # view table
+write.table(FINAL_TABLE,"Output/1_Survival_Growth/Seawater_chemistry/CarbChem_raw_chem_table.csv", fileEncoding="Windows-1252", sep=",", row.names=FALSE)  # write table to 
 ```
+
+
+* CarbChem_Meseck_means.by.day
+```{r CarbChem_Meseck_means.by.day build chemistry table, include=FALSE}
+
+Chem_means_F1_F2 <- CarbChem_Meseck_means.by.day %>% 
+     # na.omit() %>% 
+   dplyr::group_by(Generation, pCO2_treatment, variable) %>% 
+   dplyr::summarise(mean2 = mean(mean),
+                    sd   = sd(mean),
+                    se   = sd/(sqrt(n())) ,
+                    n = n())
+
+
+carbchem.MASTER_wideMEANS <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="mean2")
+carbchem.MASTER_wideStErr <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="se")
+carbchem.MASTER_wideN     <- dcast(Chem_means_F1_F2, Generation+pCO2_treatment ~ variable, value.var="n")
+
+# final table
+
+colnames(carbchem.MASTER_wideMEANS)
+FINAL_TABLE                <- data.frame(matrix(nrow = nrow(carbchem.MASTER_wideMEANS), ncol = 1))
+
+FINAL_TABLE$Generation     <- carbchem.MASTER_wideMEANS$Generation
+
+FINAL_TABLE$pCO2_Treatment <- carbchem.MASTER_wideMEANS$pCO2_treatment
+
+FINAL_TABLE$Salinity       <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$Salinity, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$Salinity, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$Salinity,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$Temperature    <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$toC._Bucket, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$toC._Bucket, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$toC._Bucket,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$pCO2           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$pCO2_out_matm, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$pCO2_out_matm, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$pCO2_out_matm,
+                                     ")",
+                                     sep = "")
+
+
+
+FINAL_TABLE$pH             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pH__Calculated, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$pH__Calculated, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$pH__Calculated,
+                                     ")",
+                                     sep = "")
+
+# FINAL_TABLE$HCO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$HCO3_out_mmol_kgSW, digits=3)),
+#                                      (signif(carbchem.MASTER_wideStErr$HCO3_out_mmol_kgSW, digits=3)), sep=" ± ")),
+#                                      " (",
+#                                      carbchem.MASTER_wideN$HCO3_out_mmol_kgSW,
+#                                      ")",
+#                                      sep = "")
+
+# FINAL_TABLE$CO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$CO3_out_mmol_kgSW, digits=3)),
+#                                              "±",
+#                                      (signif(carbchem.MASTER_wideStErr$CO3_out_mmol_kgSW, digits=3)), sep="  ")),
+#                                      " (",
+#                                      carbchem.MASTER_wideN$CO3_out_mmol_kgSW,
+#                                      ")",
+#                                      sep = "")
+
+FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_alkalinity_mmol.kgSW, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$Total_alkalinity_mmol.kgSW, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$Total_alkalinity_mmol.kgSW,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$DIC             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$Total_Dissolved_inorganic_carbon_mmol.kgSW,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$Aragonite.Sat  <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$WAr_out, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$WAr_out, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$WAr_out,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE                <- FINAL_TABLE[,-1] # view table
+
+# write.table(chem_meanDate,"C:/Users/samjg/Documents/Github_repositories/Cvirginica_multistressor/RAnalysis/Output/Water_Chem/Chem.Table_sep.csv",sep=",", row.names=FALSE)  # write table to 
+mytext <- gsub("’", "'", FINAL_TABLE )
+
+write.csv(FINAL_TABLE,"Output/1_Survival_Growth/Seawater_chemistry/CarbChem_Meseck_Table.csv", fileEncoding="Windows-1252", sep="," , row.names=FALSE)  # write table to 
+```
+
 
 
 ## knitR to print the table 
@@ -494,120 +744,3 @@ FINAL_TABLE %>%
 
 
 
-
-
-
-
-# TABLE (all data)
-
-```{r use dplyr to build chemistry table, include=FALSE}
-
-# change to long format to properly facet
-carbchem.MASTER_long <- carbchem.MASTER %>% 
-  dplyr::select(!c(Treatment,Replicate)) %>% 
-  melt(id.vars=c('Date', 'Type', 'pCO2_treatment'))
-
-carbchem.MASTER_long$value <- as.numeric(carbchem.MASTER_long$value) # make numeric
-
-carbchem.MASTER_MEANS <- carbchem.MASTER_long %>% # calc means and standard error
-   na.omit() %>% 
-   dplyr::group_by(Date, Type, pCO2_treatment, variable) %>% 
-   dplyr::summarise(mean = mean(value),
-                    sd   = sd(value),
-                    se   = sd/(sqrt(n())) )
-
-chem_meanDate <- carbchem.MASTER_MEANS %>% 
-     na.omit() %>% 
-   dplyr::group_by(pCO2_treatment, variable) %>% 
-   dplyr::summarise(mean2 = mean(mean),
-                    sd   = sd(mean),
-                    se   = sd/(sqrt(n())) ,
-                    n = n())
-
-carbchem.MASTER_wideMEANS <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="mean2")
-carbchem.MASTER_wideStErr <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="se")
-carbchem.MASTER_wideN     <- dcast(chem_meanDate, pCO2_treatment ~ variable, value.var="n")
-
-# final table
-
-colnames(carbchem.MASTER_wideMEANS)
-FINAL_TABLE                <- data.frame(matrix(nrow = nrow(carbchem.MASTER_wideMEANS), ncol = 1))
-
-FINAL_TABLE$pCO2_Treatment <- carbchem.MASTER_wideMEANS$pCO2_treatment
-
-FINAL_TABLE$Salinity       <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$Salinity, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$Salinity, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$Salinity,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$pCO2           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$xCO2_out._dry_at._1_atm_.ppm_.DIC_pH,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$Temperature    <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Temperature_bucket_C, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$Temperature_bucket_C, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$Temperature_bucket_C,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$pH             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pH_out, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$pH_out, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$pH_out,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$HCO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$HCO3_out_mmol_kgSW, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$HCO3_out_mmol_kgSW, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$HCO3_out_mmol_kgSW,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$CO3           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$CO3_out_mmol_kgSW, digits=3)),
-                                             "±",
-                                     (signif(carbchem.MASTER_wideStErr$CO3_out_mmol_kgSW, digits=3)), sep="  ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$CO3_out_mmol_kgSW,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$TA_mmol_kgSW, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$TA_mmol_kgSW, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$TA_mmol_kgSW,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE$Aragonite.Sat  <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$War_out_DIC_pH, digits=3)),
-                                     (signif(carbchem.MASTER_wideStErr$War_out_DIC_pH, digits=3)), sep=" ± ")),
-                                     " (",
-                                     carbchem.MASTER_wideN$War_out_DIC_pH,
-                                     ")",
-                                     sep = "")
-
-FINAL_TABLE                <- FINAL_TABLE[,-1] # view table
-```
-
-
-## knitR to print the table 
-```{r lable output, echo=TRUE}
-FINAL_TABLE %>%
-  kbl(caption = "Table 1. Seawater chemistry") %>%
-  kable_classic(full_width = T, html_font = "Cambria")
-```
-
-
-#### save data (food x OA manuscript)
-```{r save tables, echo=TRUE}
-# save output table
-# write.table(chem_meanDate,"C:/Users/samjg/Documents/Github_repositories/Cvirginica_multistressor/RAnalysis/Output/Water_Chem/Chem.Table_sep.csv",sep=",", row.names=FALSE)  # write table to 
-# write.table(FINAL_TABLE,"C:/Users/samjg/Documents/Github_repositories/Cvirginica_multistressor/RAnalysis/Output/Water_Chem/Chem.Table.csv",sep=",", row.names=FALSE)  # write table to 
-
-```

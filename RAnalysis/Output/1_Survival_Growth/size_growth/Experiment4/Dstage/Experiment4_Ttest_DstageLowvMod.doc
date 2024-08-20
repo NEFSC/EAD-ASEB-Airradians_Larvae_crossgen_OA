@@ -1,0 +1,12 @@
+
+	Two Sample t-test
+
+data:  Exp4_Dstage$Length by as.factor(Exp4_Dstage$Larvae_pCO2)
+t = 0.98183, df = 4, p-value = 0.3818
+alternative hypothesis: true difference in means between group Low pCO2 and group Moderate pCO2 is not equal to 0
+95 percent confidence interval:
+ -3.899359  8.166026
+sample estimates:
+     mean in group Low pCO2 mean in group Moderate pCO2 
+                   103.1000                    100.9667 
+

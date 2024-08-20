@@ -33,7 +33,7 @@ library(ggpubr)
 library(SciViews)
 
 # SET WORKING DIRECTORY :::::::::::::::::::::::::::::::::::::::::::::::
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/Airradians_multigen_OA/RAnalysis")
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis")
 
 
 ```
@@ -561,6 +561,7 @@ Exp6_barplot <- ggplot(Exp6_mean_tank) +
                         facet_wrap(~Date * pCO2_parents) # scales = "free_y")
 
 Exp6_MeanSE <- Exp6_mean_tank  %>% 
+                        dplyr::filter(!mean_RR>0.0010) %>% 
                         ggplot(aes(x=pCO2_offspring, 
                                  y=mean_RR, 
                                  colour=pCO2_offspring)) +
@@ -661,9 +662,14 @@ summary(aov(Exp6_TwoWayANOVA_T1))
 Exp6_OneANOVA_T1_LOW <- lm(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
                                   dplyr::filter(pCO2_parents %in% '500 uatm')))
+
 shapiro.test(resid(Exp6_OneANOVA_T1_LOW)) # 0.3005
 leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
 summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
+kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+
 
 Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
@@ -671,6 +677,10 @@ Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring,
 shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
 leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
 summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
+kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+
 
 Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
@@ -678,7 +688,9 @@ Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring,
 shapiro.test(resid(Exp6_OneANOVA_T1_HIGH)) # pass
 leveneTest(Exp6_OneANOVA_T1_HIGH) # pass
 summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
-
+kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
 
 
 

@@ -1,0 +1,5 @@
+            Df Sum Sq Mean Sq F value   Pr(>F)    
+Larvae_pCO2  2 1774.0   887.0   119.5 1.05e-07 ***
+Residuals   10   74.2     7.4                     
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

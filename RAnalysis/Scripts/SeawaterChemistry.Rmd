@@ -668,9 +668,15 @@ FINAL_TABLE$pCO2           <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$
                                      ")",
                                      sep = "")
 
+FINAL_TABLE$pH_NBS             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pHmeaured, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$pHmeaured, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$pHmeaured,
+                                     ")",
+                                     sep = "")
 
 
-FINAL_TABLE$pH             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pH__Calculated, digits=3)),
+FINAL_TABLE$pH_total_scale             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$pH__Calculated, digits=3)),
                                      (signif(carbchem.MASTER_wideStErr$pH__Calculated, digits=3)), sep=" ± ")),
                                      " (",
                                      carbchem.MASTER_wideN$pH__Calculated,
@@ -703,6 +709,13 @@ FINAL_TABLE$DIC             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$
                                      (signif(carbchem.MASTER_wideStErr$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=3)), sep=" ± ")),
                                      " (",
                                      carbchem.MASTER_wideN$Total_Dissolved_inorganic_carbon_mmol.kgSW,
+                                     ")",
+                                     sep = "")
+
+FINAL_TABLE$Calcite.Sat  <-  paste( (paste( (signif(carbchem.MASTER_wideMEANS$WCa_out, digits=3)),
+                                     (signif(carbchem.MASTER_wideStErr$WCa_out, digits=3)), sep=" ± ")),
+                                     " (",
+                                     carbchem.MASTER_wideN$WCa_out,
                                      ")",
                                      sep = "")
 

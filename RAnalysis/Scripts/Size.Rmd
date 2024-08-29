@@ -1602,7 +1602,7 @@ capture.output((Exp4_Ttest_10DPFmod),
 # NOTE: one way test using two groups, the t test is more approporate here
 # All treatment Low and moderate
 Exp4_metamorphosis <-  Exp4 %>%
-                    dplyr::filter(Age %in% 10) %>% 
+                    dplyr::filter(Age %in% 14) %>% 
                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
@@ -1635,18 +1635,18 @@ summary(aov(Exp4_AOV_res.mod))
 (Exp4_metamorphosis %>% 
         group_by(as.factor(Larvae_pCO2)) %>% 
         rstatix::shapiro_test(Length))
-# Low pCO2	Length	0.9440934	0.5441045	
-# Moderate pCO2	Length	0.8067505	0.1307179	
+# Low pCO2	Length	0.9758065	0.70172415	
+# Moderate pCO2	Length	0.7904157	0.09181735	
 
 # equal variance 
 (Exp4_metamorphosis %>% 
-    rstatix::levene_test(Length ~ as.factor(Larvae_pCO2)))$p[1] # 0.7100857 pass variance
+    rstatix::levene_test(Length ~ as.factor(Larvae_pCO2)))$p[1] # 0.7134802 pass variance
         
 # run Welch's
 Exp4_Ttest_mod <- t.test(Exp4_metamorphosis$Length ~ 
                            (as.factor(Exp4_metamorphosis$Larvae_pCO2)),
                           var.equal = TRUE) # because of tests above
-# t = 1.1766, df = 4, p-value = 0.3046
+# t = 3.8372, df = 4, p-value = 0.0185
 
 # output important data
 library(purrr)

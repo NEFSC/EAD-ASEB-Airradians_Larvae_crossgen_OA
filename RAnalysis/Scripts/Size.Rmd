@@ -12,8 +12,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 
@@ -1488,8 +1488,6 @@ capture.output((Exp2_Ttest_mod),
 
 ```
 
-
-
 ### Experiment 4 (F2s)
 
 * D stage 
@@ -1660,7 +1658,138 @@ capture.output((Exp4_Ttest_mod),
                file="Output/1_Survival_Growth/size_growth/Experiment4/Metamorphosis/Experiment4_Length_metamorphosis_Ttest_LowvMod.doc") 
 ```
 
+### Experiment 2 (F1s) & Experiment 4 (F2s)
 
+* Run two way anayses (two way anova, if nonparametric SRH)
+* OA treatment by generation effects 
+* I beleive this is only reasonable at 2 DPF when diet was siilar, or not cumulatively diverged
+but I run the models here for 2, 10 and size at metamorphosis (10 F1 and 14 F2)
+
+```{r Two-way tests to comapre size; F1 and F2 data}
+
+Exp2_LvM <-  Exp2 %>%
+                            dplyr::filter(Age %in% c(2,4,8,10)) %>% 
+                            dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% # omit high run for low vs. mod
+                            dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                            convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                            dplyr::mutate(Generation = 'F1') %>% 
+                            na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+Exp2_LvM_2DPF  <- Exp2_LvM %>%  dplyr::filter(Age %in% 2)
+Exp2_LvM_4DPF  <- Exp2_LvM %>%  dplyr::filter(Age %in% 4)
+Exp2_LvM_8DPF  <- Exp2_LvM %>%  dplyr::filter(Age %in% 8)
+Exp2_LvM_10DPF <- Exp2_LvM %>%  dplyr::filter(Age %in% 10)
+
+
+Exp4_LvM <-  Exp4 %>%
+                            dplyr::filter(Age %in% c(2,4,8,10,14)) %>% 
+                            # dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% # omit high run for low vs. mod
+                            dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
+                            convert_as_factor(ID, Age, Larvae_pCO2) %>% 
+                            dplyr::mutate(Generation = 'F2') %>% 
+                            na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
+Exp4_LvM_2DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 2) 
+Exp4_LvM_4DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 4)
+Exp4_LvM_8DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 8)
+Exp4_LvM_10DPF <- Exp4_LvM %>%  dplyr::filter(Age %in% 10)
+Exp4_LvM_14DPF <- Exp4_LvM %>%  dplyr::filter(Age %in% 14)
+
+
+
+
+
+
+# D stage comparison - significant effect of generation, TW anova 
+#   * data: Exp2_LvM_2DPF and Exp4_LvM_2DPF
+master_2DPF <- rbind(Exp2_LvM_2DPF, Exp4_LvM_2DPF)
+
+TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_2DPF)
+shapiro_test(resid(TWanova)) # 0.6054551 pass
+levene_test(TWanova) # 0.8945093 pass
+TWanova_summ <- summary( aov (TWanova))
+#                        Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2             1  12.48   12.48   3.144    0.104    
+# Generation              1 143.13  143.13  36.054 8.87e-05 ***
+# Larvae_pCO2:Generation  1   0.00    0.00   0.001    0.104    
+# Residuals              11  43.67    3.97
+
+
+
+
+
+
+# 4 DPF comparison  - effect of OA treatment SRH
+#   * data: Exp2_LvM_4DPF and Exp4_LvM_4DPF
+master_4DPF <- rbind(Exp2_LvM_4DPF, Exp4_LvM_4DPF)
+
+TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_4DPF)
+shapiro_test(resid(TWanova)) # 0.02248879 NO
+levene_test(TWanova) # 0.9193548 pass
+scheirerRayHare(Length ~ Larvae_pCO2 * Generation, data= master_4DPF)
+#                        Df  Sum Sq      H p.value
+# Larvae_pCO2             1 128.067 6.4034 0.01139
+# Generation              1  72.442 3.6221 0.05702
+# Larvae_pCO2:Generation  1   0.100 0.0050 0.94377
+# Residuals              11  89.333
+
+
+
+
+# 8 DPF comparison - effect of Generation two way anova
+#   * data: Exp2_LvM_8DPF and Exp4_LvM_8DPF
+master_8DPF <- rbind(Exp2_LvM_8DPF, Exp4_LvM_8DPF)
+
+TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_8DPF)
+shapiro_test(resid(TWanova)) # 0.5121937 pass
+levene_test(TWanova) # 0.5127867 pass
+TWanova_summ <- summary( aov (TWanova))
+#                        Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2             1   99.2    99.2   1.674 0.220053    
+# Generation              1 1256.9  1256.9  21.222 0.000604 ***
+# Larvae_pCO2:Generation  1   16.4    16.4   0.276 0.608592    
+# Residuals              12  710.7    59.2 
+
+Rmisc::summarySE(master_8DPF,  measurevar = 'Length',
+                  groupvars = c('Generation')
+                 )
+# F1	10	160.9910	9.259488	2.928107	6.623839
+# F2	6	  142.6833	3.304189	1.348930	3.467534
+
+
+
+# 10 DPF comparison - main effect of OA and generation tw anova
+#   * data: Exp4_10DPF and Exp2_metamorphosis_LvM
+#   * data: Exp2_LvM_10DPF and Exp4_LvM_10DPF
+master_10DPF <- rbind(Exp2_LvM_10DPF, Exp4_LvM_10DPF)
+
+TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_10DPF)
+shapiro_test(resid(TWanova)) # 0.4529234 pass
+levene_test(TWanova) # 0.9331632 pass
+TWanova_summ <- summary( aov (TWanova))
+#                        Df Sum Sq Mean Sq F value Pr(>F)  
+# Larvae_pCO2             1  513.4   513.4   7.361 0.0188 *
+# Generation              1  339.2   339.2   4.863 0.0477 *
+# Larvae_pCO2:Generation  1   18.3    18.3   0.263 0.6177  
+# Residuals              12  836.9    69.7 
+
+
+
+
+
+# Size a metamorsposis comaparison (10 DPF for F1 and 14 DPF for F2)  - main effect of OA and generation tw anova
+#   * data: Exp2_LvM_10DPF and Exp4_LvM_14DPF
+master_metamorphosis <- rbind(Exp2_LvM_10DPF, Exp4_LvM_14DPF)
+
+TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_metamorphosis)
+shapiro_test(resid(TWanova)) # 0.5986453 pass
+levene_test(TWanova) # 0.3201007 pass
+TWanova_summ <- summary( aov (TWanova))
+#                        Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2             1  484.3   484.3  10.703  0.00668 ** 
+# Generation              1 2146.2  2146.2  47.427 1.68e-05 ***
+# Larvae_pCO2:Generation  1   26.2    26.2   0.579  0.46144    
+# Residuals              12  543.0    45.3 
+
+```
 
 
 

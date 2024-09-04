@@ -1172,8 +1172,9 @@ Exp2_Pre.calc <- Exp2_PrePost %>%
                                     delta.perc = Age_10 - Age_4) %>%  # sutract em
                       dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
                                                            .default = delta.perc),
-                                    abs.delta.perc = abs(delta.perc)) %>% # now take the absolute value
-                      na.omit() %>% 
+                                    abs.delta.perc = abs(delta.perc), # now take the absolute value
+                                    prop_survival = NA )%>% # to bind with the post.calc data
+                      # na.omit() %>% 
                       dplyr::select(-c(Age_10,Age_4)) # no longer need these, remove to merge with post
   
 
@@ -1189,7 +1190,13 @@ Exp2_Post.calc <- Exp2_PrePost %>%
                                     delta.perc = Age_18 - Age_10) %>%  # sutract em
                       dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
                                                            .default = delta.perc),
-                                    abs.delta.perc = abs(delta.perc))%>% # now take the absolute value
+                                    abs.delta.perc = abs(delta.perc),
+                                    prop_survival = Age_18 / Age_10
+                                    ) %>% # now take the absolute value
+                      dplyr::mutate(prop_survival = case_when(prop_survival > 1 ~ 1, # if greater than one, make this one, this means that 
+                                                              # survival at metamorposis was likely underestaimted, thus 100% of those quantified at first metamorphosis 
+                                                              # persisted to 8 days post with no mortalities, this is all we can assume from these data
+                                                              TRUE ~ prop_survival)) %>% 
                       na.omit() %>% 
                       dplyr::select(-c(Age_18,Age_10)) # no longer need these, remove to merge with post
 
@@ -1219,8 +1226,9 @@ Exp4_Pre.calc <- Exp4_PrePost %>%
                                     delta.perc = Age_14 - Age_8) %>%  # sutract em
                       dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
                                                            .default = delta.perc),
-                                    abs.delta.perc = abs(delta.perc)) %>% # now take the absolute value
-                      na.omit() %>% 
+                                    abs.delta.perc = abs(delta.perc), # now take the absolute value
+                                    prop_survival = NA )%>% # to bind with the post.calc data
+                      # na.omit() %>% 
                       dplyr::select(-c(Age_8,Age_14)) # no longer need these, remove to merge with post
   
 
@@ -1234,7 +1242,13 @@ Exp4_Post.calc <- Exp4_PrePost %>%
                                     delta.perc = Age_21 - Age_14) %>%  # sutract em
                       dplyr::mutate(delta.perc = case_when(delta.perc > 0 ~ 0, # positives make zero
                                                            .default = delta.perc),
-                                    abs.delta.perc = abs(delta.perc))%>% # now take the absolute value
+                                    abs.delta.perc = abs(delta.perc),
+                                    prop_survival = Age_21 / Age_14
+                                    ) %>% # now take the absolute value
+                      dplyr::mutate(prop_survival = case_when(prop_survival > 1 ~ 1, # if greater than one, make this one, this means that 
+                                                              # survival at metamorposis was likely underestaimted, thus 100% of those quantified at first metamorphosis 
+                                                              # persisted to 8 days post with no mortalities, this is all we can assume from these data
+                                                              TRUE ~ prop_survival)) %>% 
                       na.omit() %>% 
                       dplyr::select(-c(Age_14,Age_21)) # no longer need these, remove to merge with post
 
@@ -1271,7 +1285,9 @@ summary(TwoWay.Pre) # NO EFFECT
 
 
 
+# POST DATA - here we have the following data for tests
 
+# (1) the change in survival
 
 # delta post - test the effects of larvae pCO2 and generation
 TwoWay.Post <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
@@ -1302,6 +1318,23 @@ TwoWay.Post.emmeans.pCO2.Gen.letters <- multcomp::cld(object = TwoWay.Post.emmea
  # Low pCO2      1          0.0608 0.0116 12   0.0356   0.0860  a    
  # Moderate pCO2 1          0.0712 0.0116 12   0.0460   0.0964  a    
  # Moderate pCO2 2          0.1530 0.0150 12   0.1204   0.1856   b  
+
+
+
+# (2) proportion of those at metamorphosis that survived thereaftter
+# this was simply calculated by dividing the survival 
+# delta post - test the effects of larvae pCO2 and generation
+TwoWay.Post_propsurv <- aov(lm(prop_survival ~ Larvae_pCO2 * Generation, 
+                     data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post'))
+                  ))
+shapiro.test(resid(TwoWay.Post_propsurv)) # 0.157 - pass
+leveneTest(TwoWay.Post_propsurv) # 0.05949 . - pass
+summary(TwoWay.Post_propsurv)
+#                        Df Sum Sq Mean Sq F value  Pr(>F)   
+# Larvae_pCO2             1 0.4595  0.4595  10.110 0.00793 **
+# Generation              1 0.0255  0.0255   0.561 0.46842   
+# Larvae_pCO2:Generation  1 0.0536  0.0536   1.180 0.29874   
+# Residuals              12 0.5454  0.0454 
 
 ```
 
@@ -1353,12 +1386,101 @@ DeltaPercent_barplot <- ggplot(Exp2Exp4_PrePost.summ) +
                           facet_wrap(~type)
 
 
-capture.output(summary(TwoWay.Pre), file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Pre_Metamorphosis_TwoWayANOVA.doc")
-capture.output(SRH.Post, file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Post_Metamorphosis_SRH.doc")
+capture.output(summary(TwoWay.Pre), file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Experiment4_Low_v_Mod/pre_post_metamorphosis/Pre_Metamorphosis_TwoWayANOVA.doc")
+capture.output(SRH.Post, file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Experiment4_Low_v_Mod/pre_post_metamorphosis/Post_Metamorphosis_SRH.doc")
 
 pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/PrePost_Metamorphosis.pdf",width = 4, height = 4)
 DeltaPercent_barplot
 dev.off()
+
+
+
+
+Exp2Exp4_Post_propsurv.summ <- Exp2Exp4_PrePost.master %>% 
+                          dplyr::filter(type %in% 'post') %>% 
+                          dplyr::select(Generation,type,Larvae_pCO2,prop_survival) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Generation,Larvae_pCO2,type) %>% 
+                          dplyr::summarise(mean_prop_survival = mean(prop_survival), 
+                                           n                  = n(),
+                                           sd_prop_survival   = sd(prop_survival),
+                                           se_prop_survival   = sd_prop_survival/(sqrt(n)))
+
+PropSurv_barplot <- ggplot(Exp2Exp4_Post_propsurv.summ) +
+                          geom_errorbar(aes(x=Larvae_pCO2, 
+                                             ymin=mean_prop_survival-se_prop_survival, 
+                                             ymax=mean_prop_survival+se_prop_survival,
+                                             group=Generation,
+                                             fill=Larvae_pCO2), 
+                                        position=position_dodge(.9),
+                                        width=0, # removes the horizontal line
+                                        colour="black",
+                                        size=1) +
+                          geom_bar(aes(x=Larvae_pCO2, 
+                                       y=mean_prop_survival,
+                                       fill=factor(Larvae_pCO2),
+                                       group=Generation),
+                                   position=position_dodge(.9),
+                                   stat="identity",
+                                   width = 0.75,
+                                   alpha = 0.5) +
+                          labs(title="Proportion survived 8 days post", 
+                              x ="pCO2 Exposure", 
+                              y = "Proportion survival") +
+                           scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                               values=c("forestgreen","orange")) +
+                          scale_x_discrete(labels=c("L", "M")) +
+                          # scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                          theme_classic() +
+                          theme(panel.grid.major = element_blank(), 
+                                panel.grid.minor = element_blank(), 
+                                axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                                axis.text=element_text(size=10),
+                                legend.position="none")
+
+PropSurv_MeanSE <- ggplot(
+                      (Exp2Exp4_PrePost.master %>% 
+                          dplyr::filter(type %in% 'post')),
+                       aes(x=Larvae_pCO2, 
+                           y=prop_survival,
+                           group=Generation,
+                           fill=factor(Larvae_pCO2)), 
+                           stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2, group=Generation), 
+                                        position = position_dodge2(width = 0.5)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                    position = position_dodge2(width = 0.5)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen", "forestgreen", "orange", "orange")) + 
+                          labs(title="Proportion survived 8 days post", 
+                              x ="pCO2 Exposure", 
+                              y = "Proportion survival") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+
+
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Experiment4_Low_v_Mod/pre_post_metamorphosis/Post_Metamorphosis_PropSurvival.pdf",width = 4, height = 4)
+PropSurv_MeanSE
+dev.off()
+
+
+capture.output(summary(TwoWay.Post_propsurv), file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Experiment4_Low_v_Mod/pre_post_metamorphosis/Post_Metamorphosis_PorpSurv_TwoWayANOVA.doc")
+
 ```
 
 

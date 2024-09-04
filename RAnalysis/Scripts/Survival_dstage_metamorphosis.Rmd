@@ -22,8 +22,8 @@ perspective of treatment/generation effect across the larval period.
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 ### LOAD PACKAGES
@@ -56,7 +56,7 @@ library(gtsummary) # tbl_survfit
 
 df<- read.csv("Data/larval_survival.csv", header = T) %>% 
                   dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival_rel_dstage,
-                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_embryos))) %>% 
+                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_stocking))) %>% 
                   # dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
                   
                   # rename the variables for consistency using 'case_when'

@@ -716,9 +716,9 @@ binary_Exp4_MEANS <- binary_Exp4_MEANS %>%
 ```{r filter larval period F2 Experiment #4}
 
 binary_Exp4_larvae      <- binary_Exp4_all %>% filter(Age <=14) %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-                            dplyr::mutate(Prop_time_metamophosis = Age/14)
+                            dplyr::mutate(Prop_time_metamophosis = Age/12)
 binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) %>% # F1 - aligned timepoint prior to F1 metamorph for Gen 1 and 2 comparisons
-                            dplyr::mutate(Prop_time_metamophosis = Age/14)
+                            dplyr::mutate(Prop_time_metamophosis = Age/12)
 ```
 
 ```{r surv object F2 Experiment #4}
@@ -726,7 +726,7 @@ binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) %>% # F1 - ali
 survExp4_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
 
 # convert Age to the proportion of time to metamorphosis 
-binary_Exp4_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp4_larvaeMEANS$Age / 14)
+binary_Exp4_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp4_larvaeMEANS$Age / 12)
 
 survExp4          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
 survExp4_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
@@ -845,31 +845,41 @@ dev.off()
 * NOTE: omit the 'high' treatment in F1 as this was not present in F2 larvae
 ```{r merge Experiments 2 and 4}
 # all - with tank replicate included
+# BIG CHANGE ON 9/16/2024 - our notes indicate that FIRST METAMORPHOSIS IN F2S OCCURED AT 12 DPF!!! NOT 14
+# the previous analysis remains the same (meeting with Dianna and Shannon 9/6/2024)
+# however the anlaysis here, standardizing time to FIRST OBSERVATION of metamorphosis neeeds to change for F2s! 
+# below in the binary_Exp_Exp4_all I commented out the VERY MINOR code change to do this, review what I did below
 head(binary_Exp2_larvae)
 head(binary_Exp4_larvae)
-binary_Exp2_Exp4_all             <- rbind( (binary_Exp2_larvae),# %>% dplyr::select(!cluster)),
-                                           (binary_Exp4_larvae %>% dplyr::select(!Tank_num)
-                                           )) %>% 
-                                         dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
-                                         dplyr::mutate(Prop_time_metamophosis = 
-                                                            case_when(Generation == 1 ~ (Age / 10),
-                                                                      Generation == 2 ~ (Age / 14))) %>% 
+View(binary_Exp2_Exp4_all)
+binary_Exp2_Exp4_all             <- rbind(binary_Exp2_larvae,# %>% dplyr::select(!cluster)),
+                                          (binary_Exp4_larvae %>% 
+                                            dplyr::select(!Tank_num)) # %>% 
+                                            #dplyr::filter(!Age %in% 14)) # NOTE: 9/6/2024, omit 14 dpf from the F2s, truncate out the post inital obs of metamorph
+                                         )# %>% 
+                                         # dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
+                                         # dplyr::mutate(Prop_time_metamophosis = 
+                                                            # case_when(Generation == 1 ~ (Age / 10),
+                                                                      # Generation == 2 ~ (Age / 12))) %>% # NOTE: 9/6/2024, change from 14 to 12to correct for the note stated above!!!
                                          # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
-                                         dplyr::filter(!Prop_time_metamophosis >1) 
-
+                                         # dplyr::filter(!Prop_time_metamophosis >1) 
+unique(binary_Exp2_Exp4_all$Prop_time_metamophosis)
 # omit high pCO2 as a level in larvae pCO2 - just compare moderate and low here
 binary_Exp2_Exp4_all$Larvae_pCO2 <- factor(binary_Exp2_Exp4_all$Larvae_pCO2, exclude = 'High pCO2')
 
 #  by mean tank
-binary_Exp2_Exp4_MEANS             <- rbind(binary_Exp2_larvaeMEANS, binary_Exp4_larvaeMEANS ) %>% 
-                                           dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) %>% 
-                                           dplyr::mutate(Prop_time_metamophosis = 
-                                                            case_when(Generation == 1 ~ (Age / 10),
-                                                                      Generation == 2 ~ (Age / 14))) %>% 
+binary_Exp2_Exp4_MEANS             <- rbind(binary_Exp2_larvaeMEANS, 
+                                            binary_Exp4_larvaeMEANS #%>% 
+                                              #dplyr::filter(!Age %in% 14)) # NOTE: 9/6/2024, omit 14 dpf from the F2s, truncate out the post inital obs of metamorph
+                                            ) %>% 
+                                           dplyr::filter(!(Larvae_pCO2 == 'High pCO2')) # %>% 
+                                           # dplyr::mutate(Prop_time_metamophosis = 
+                                                            # case_when(Generation == 1 ~ (Age / 10), 
+                                                                      # Generation == 2 ~ (Age / 12))) %>% # NOTE: 9/6/2024, change from 14 to 12to correct for the note stated above!!!
                                          # omit timpoints after 10 days for Gen 1 and after 14 days for Gen 2
-                                         dplyr::filter(!Prop_time_metamophosis >1) 
+                                         #dplyr::filter(!Prop_time_metamophosis >1) 
 binary_Exp2_Exp4_MEANS$Larvae_pCO2 <- factor(binary_Exp2_Exp4_MEANS$Larvae_pCO2, exclude = 'High pCO2')
-
+unique(binary_Exp2_Exp4_MEANS$Prop_time_metamophosis)
 
 # sanity check
 binary_Exp2_Exp4_all %>% dplyr::filter(Prop_time_metamophosis > 1) # should be no data!
@@ -886,11 +896,11 @@ binary_Exp2_Exp4_MEANS_larvaeMOD <- binary_Exp2_Exp4_MEANS %>% filter(Larvae_pCO
 # what days are included?
 unique(binary_Exp2_larvae$Age) # 2  4  8 10
 unique(binary_Exp4_larvae$Age) # 2  6  8 10 14
-unique(binary_Exp2_Exp4_all$Age) #  2  4  8 10  6 14
+unique(binary_Exp2_Exp4_all$Age) #  2  4  8 10  6 # NOTE: 9/6/2024, day 14 is gonzo!
 
 unique(binary_Exp2_larvaeMEANS$Age) # 2  4  8 10
 unique(binary_Exp4_larvaeMEANS$Age) # 2  6  8 10 14
-unique(binary_Exp2_Exp4_MEANS$Age) #  2  4  8 10  6 14
+unique(binary_Exp2_Exp4_MEANS$Age) #  2  4  8 10  6 # NOTE: 9/6/2024, day 14 is gonzo!
 
 ```
 
@@ -899,9 +909,10 @@ unique(binary_Exp2_Exp4_MEANS$Age) #  2  4  8 10  6 14
 * note there is a large CI for the 'mean' data 
 ```{r surv object merge F1 & F2 for plotting}
 
+binary_Exp2_Exp4_MEANS_2 <- binary_Exp2_Exp4_MEANS %>% dplyr::filter(!Age == 14) 
+unique(binary_Exp2_Exp4_MEANS_2$Prop_time_metamophosis)
 s1_2          <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
 s1_2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
-
 
 s1_2LOW          <- survfit2(Surv(Age, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeLOW)
 s1_2proptimeLOW  <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Generation, data = binary_Exp2_Exp4_MEANS_larvaeLOW)
@@ -978,11 +989,11 @@ dev.off()
 ```{r log-rank test survdiff  merge F1 & F2}
 
 F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
-#                                             N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2, Generation=1      11541     9682     9230     22.18     85.47
-# Larvae_pCO2=Low pCO2, Generation=2        250      166      310     66.67    161.11
-# Larvae_pCO2=Moderate pCO2, Generation=1  9424     8038     8122      0.87      2.98
-# Larvae_pCO2=Moderate pCO2, Generation=2   336      190      415    121.78    296.27
+#                                               N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2, Generation=1       952642   766697   623187     33048     57513
+# Larvae_pCO2=Low pCO2, Generation=2      1015383   931332  1046991     12777     29979
+# Larvae_pCO2=Moderate pCO2, Generation=1  941647   803030   615991     56792     98608
+# Larvae_pCO2=Moderate pCO2, Generation=2 2200474  2054068  2268959     20352     70256
 
 ```
 
@@ -1021,7 +1032,8 @@ ggarrange(Exp2_Exp4_hazardratio.int, Exp2_Exp4_hazardratio.add, ncol=2)
 dev.off()
 
 # MIXED COX PROPRTION HAZARDS MODEL 
-
+binary_Exp2_Exp4_all <- binary_Exp2_Exp4_all%>% dplyr::filter(!Larvae_pCO2 %in% NA)
+unique(binary_Exp2_Exp4_all$Larvae_pCO2)
 # interaction
 binary_Exp2_Exp4_all$ID <- factor(binary_Exp2_Exp4_all$ID)
 binary_Exp2_Exp4_all     <- droplevels(binary_Exp2_Exp4_all)

@@ -12,8 +12,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 
@@ -1094,6 +1094,7 @@ capture.output(cld(lsm_Exp2.LowMod.Age, Letters=letters),file="Output/1_Survival
 
 # (2.3) F2 expeirent has only low and moderate OA treamtnets
 Exp4_GLMMs    <-  Exp4 %>%
+                     dplyr::filter(Age < 14) %>% 
                      dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                      convert_as_factor(ID, Larvae_pCO2, Age) %>% 
                      na.omit() 
@@ -1120,12 +1121,11 @@ car::Anova(Exp4_GLMM, type=3)
 
 # Analysis of Deviance Table (Type III Wald chisquare tests)
 # 
-# Response: Length
 #                     Chisq Df Pr(>Chisq)    
-# (Intercept)     4486.9890  1    < 2e-16 ***
-# Larvae_pCO2        0.9848  1    0.32102    
-# Age             2880.1057  6    < 2e-16 ***
-# Larvae_pCO2:Age   11.7444  6    0.06792 .  
+# (Intercept)     3915.0205  1    < 2e-16 ***
+# Larvae_pCO2        0.8513  1    0.35619    
+# Age             1809.1380  5    < 2e-16 ***
+# Larvae_pCO2:Age    9.9534  5    0.07657 .  
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -1138,10 +1138,11 @@ Exp4_LMM.lme4 <- lme4::lmer(
                           data = Exp4_GLMMs,
               )
 anova(Exp4_LMM.lme4)
-#                 npar Sum Sq Mean Sq  F value
-# Larvae_pCO2        1    166   165.9  11.1334
-# Age                6  48733  8122.2 545.0616
-# Larvae_pCO2:Age    6    112    18.7   1.2575
+# Analysis of Variance Table
+#                 npar  Sum Sq Mean Sq  F value
+# Larvae_pCO2        1   100.1   100.1   6.5903
+# Age                5 29241.3  5848.3 385.0594
+# Larvae_pCO2:Age    5   103.9    20.8   1.3685
 
 Exp4_LMM.nlme <- nlme::lme(
               Length ~ 
@@ -1152,10 +1153,10 @@ Exp4_LMM.nlme <- nlme::lme(
 
 anova(Exp4_LMM.nlme)
 #             numDF denDF F-value p-value
-# (Intercept)	    1	24	31859.36	<.0001
-# Larvae_pCO2	    1	4	  11.13	    0.0289
-# Age	            6	24	545.06	  <.0001
-# Larvae_pCO2:Age	6	24	1.26	    0.3134
+# (Intercept)	    1	20	19144.041	<.0001
+# Larvae_pCO2	    1	4  	6.590	    0.0622
+# Age	            5	20	385.059	  <.0001
+# Larvae_pCO2:Age	5	20	1.368	    0.2778
 
 
 Exp4_LMM.nlme.NO_INT <- nlme::lme(
@@ -1167,8 +1168,8 @@ Exp4_LMM.nlme.NO_INT <- nlme::lme(
 
 anova(Exp4_LMM.nlme.NO_INT)
 #             numDF denDF F-value p-value
-# Larvae_pCO2	    1	   4    	11.13	  0.0289
-# Age	            6	   30	    518.37	<.0001
+# Larvae_pCO2	1	4	  6.59	0.0622
+# Age	        5	25	358.63	<.0001
 
 
 # AIC 
@@ -1218,19 +1219,18 @@ library(emmeans)
 library(multcomp)
 lsm_Exp4.LMM.Age <- lsmeans(Exp4_LMM.lme4,list(pairwise~Age),adjust="tukey")
 cld(lsm_Exp4.LMM.Age, Letters=letters)
-# Age lsmean   SE   df lower.CL upper.CL .group 
-#  2      102 1.68 25.9     98.6      105  a     
-#  4      109 1.68 25.9    105.2      112  a     
-#  6      129 1.68 25.9    125.5      132   b    
-#  8      143 1.68 25.9    139.2      146    c   
-#  10     166 1.68 25.9    162.9      170     d  
-#  12     181 1.68 25.9    177.1      184      e 
-#  14     200 1.68 25.9    196.3      203       f
+ # Age lsmean   SE   df lower.CL upper.CL .group
+ # 2      102 1.76 20.5     98.4      106  a    
+ # 4      109 1.76 20.5    104.9      112  a    
+ # 6      129 1.76 20.5    125.2      133   b   
+ # 8      143 1.76 20.5    139.0      146    c  
+ # 10     166 1.76 20.5    162.6      170     d 
+ # 12     181 1.76 20.5    176.9      184      e
 lsm_Exp4.LMM.OA <- lsmeans(Exp4_LMM.lme4,list(pairwise~Larvae_pCO2),adjust="tukey")
 cld(lsm_Exp4.LMM.OA, Letters=letters)
 # Larvae_pCO2   lsmean   SE df lower.CL upper.CL .group
-#  Moderate pCO2    144 1.16  4      141      147  a    
-#  Low pCO2         150 1.16  4      146      153   b   
+#  Moderate pCO2    136 1.41  4      132      140  a    
+#  Low pCO2         141 1.41  4      137      145  a   
 
 
 # output all of that..
@@ -1506,6 +1506,8 @@ Exp4_Dstage <-  Exp4 %>%
                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
 
+
+
 Exp4Sstage_size_summ <- summarySE(Exp4_Dstage, 
                                   measurevar="Length", 
                                   groupvars=c("Age", "Larvae_pCO2"))
@@ -1602,7 +1604,7 @@ capture.output((Exp4_Ttest_10DPFmod),
 # NOTE: one way test using two groups, the t test is more approporate here
 # All treatment Low and moderate
 Exp4_metamorphosis <-  Exp4 %>%
-                    dplyr::filter(Age %in% 14) %>% 
+                    dplyr::filter(Age %in% 12) %>% 
                     dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                     convert_as_factor(ID, Age, Larvae_pCO2) %>% 
                     na.omit() # prGR is normmalized to the inital measurement, these are NAs, omit them
@@ -1615,14 +1617,14 @@ write.csv(Exp4_metamorphosis,
 Exp4_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp4_metamorphosis)
 
 # * check model assumptions 
-shapiro.test(resid(Exp4_AOV_res.mod)) # 0.2569
-leveneTest(Exp4_AOV_res.mod) # 0.7101
+shapiro.test(resid(Exp4_AOV_res.mod)) # 0.4586
+leveneTest(Exp4_AOV_res.mod) # 0.5541
 
 # * print the summary aov
 summary(aov(Exp4_AOV_res.mod))
-#             Df Sum Sq Mean Sq F value Pr(>F)
-# Larvae_pCO2  1  110.1  110.08   1.384  0.305
-# Residuals    4  318.1   79.52 
+#             Df Sum Sq Mean Sq F value Pr(>F)  
+# Larvae_pCO2  1 180.40  180.40    20.1  0.011 *
+# Residuals    4  35.89    8.97 
 
 # capture.output(summary(aov(Exp4_AOV_res.mod)),
 #                file="Output/1_Survival_Growth/size_growth/Experiment4_Length_metamorphosis_anova.doc") 
@@ -1697,7 +1699,7 @@ Exp2_LvM_14DPF <- df %>% # use priginal 'df' beuase Exp2 was filtered by only 'l
 
 
 Exp4_LvM <-  Exp4 %>%
-                            dplyr::filter(Age %in% c(2,4,8,10,14)) %>% 
+                            dplyr::filter(Age %in% c(2,4,8,10,12)) %>% 
                             # dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% # omit high run for low vs. mod
                             dplyr::select(ID, Larvae_pCO2, Age,Length) %>% 
                             convert_as_factor(ID, Age, Larvae_pCO2) %>% 
@@ -1707,12 +1709,10 @@ Exp4_LvM_2DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 2)
 Exp4_LvM_4DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 4)
 Exp4_LvM_8DPF  <- Exp4_LvM %>%  dplyr::filter(Age %in% 8)
 Exp4_LvM_10DPF <- Exp4_LvM %>%  dplyr::filter(Age %in% 10)
-Exp4_LvM_14DPF <- Exp4_LvM %>%  dplyr::filter(Age %in% 14)
+Exp4_LvM_12DPF <- Exp4_LvM %>%  dplyr::filter(Age %in% 12)
 
 
 ```
-
-
 
 ```{r Two-way tests to comapre size; 2 dpf}
 # D stage comparison - significant effect of generation, TW anova 
@@ -1729,9 +1729,44 @@ TWanova_summ <- summary( aov (TWanova))
 # Larvae_pCO2:Generation  1   0.00    0.00   0.001    0.104    
 # Residuals              11  43.67    3.97
 
+
+Dstage_MeanSE <- ggplot(master_2DPF,
+                       aes(x=Larvae_pCO2, 
+                           y=Length,
+                           group=Generation,
+                           colour=factor(Larvae_pCO2)), 
+                           stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) + 
+                        labs(title="2 DPF size", 
+                            x ="pCO2 Exposure", 
+                            y = "Length (um)") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(limits = c(90, 105), breaks = seq(90, 105, by = 5)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(Dstage_MeanSE)
+
+
 ```
-
-
 
 ```{r Two-way tests to comapre size; 4 dpf}
 # 4 DPF comparison  - effect of OA treatment SRH
@@ -1748,7 +1783,6 @@ scheirerRayHare(Length ~ Larvae_pCO2 * Generation, data= master_4DPF)
 # Larvae_pCO2:Generation  1   0.100 0.0050 0.94377
 # Residuals              11  89.333
 ```
-
 
 ```{r Two-way tests to comapre size; 8 dpf}
 # 8 DPF comparison - effect of Generation two way anova
@@ -1770,6 +1804,41 @@ Rmisc::summarySE(master_8DPF,  measurevar = 'Length',
                  )
 # F1	10	160.9910	9.259488	2.928107	6.623839
 # F2	6	  142.6833	3.304189	1.348930	3.467534
+
+DPF8_MeanSE <- ggplot(master_8DPF,
+                       aes(x=Larvae_pCO2, 
+                           y=Length,
+                           group=Generation,
+                           colour=factor(Larvae_pCO2)), 
+                           stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) + 
+                        labs(title="8 DPF size", 
+                            x ="pCO2 Exposure", 
+                            y = "Length (um)") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(limits = c(135, 185), breaks = seq(135, 185, by = 15)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(DPF8_MeanSE)
 ```
 
 ```{r Two-way tests to comapre size; 10 dpf}
@@ -1789,63 +1858,74 @@ TWanova_summ <- summary( aov (TWanova))
 # Residuals              12  836.9    69.7 
 ```
 
-
-
 ```{r Two-way tests to comapre size; First metamorphosis at 10 dpf F1s and at 14 dpf F2s}
 # Size a metamorsposis comaparison (10 DPF for F1 and 14 DPF for F2)  - main effect of OA and generation tw anova
 #   * data: Exp2_LvM_10DPF and Exp4_LvM_14DPF
-master_metamorphosis <- rbind(Exp2_LvM_10DPF, Exp4_LvM_14DPF)
+master_metamorphosis <- rbind(Exp2_LvM_10DPF, Exp4_LvM_12DPF)
 
 TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_metamorphosis)
-shapiro_test(resid(TWanova)) # 0.5986453 pass
-levene_test(TWanova) # 0.3201007 pass
+shapiro_test(resid(TWanova)) # 0.8497685 pass
+levene_test(TWanova) # 0.3674702 pass
 TWanova_summ <- summary( aov (TWanova))
-#                        Df Sum Sq Mean Sq F value   Pr(>F)    
-# Larvae_pCO2             1  484.3   484.3  10.703  0.00668 ** 
-# Generation              1 2146.2  2146.2  47.427 1.68e-05 ***
-# Larvae_pCO2:Generation  1   26.2    26.2   0.579  0.46144    
-# Residuals              12  543.0    45.3 
+#                        Df Sum Sq Mean Sq F value  Pr(>F)   
+# Larvae_pCO2             1  598.2   598.2  12.939 0.00367 **
+# Generation              1   83.7    83.7   1.809 0.20345   
+# Larvae_pCO2:Generation  1    3.8     3.8   0.083 0.77859   
+# Residuals              12  554.8    46.2 
+
+
+Metamorph_MeanSE <- ggplot(master_metamorphosis,
+                       aes(x=Larvae_pCO2, 
+                           y=Length,
+                           group=Generation,
+                           colour=factor(Larvae_pCO2)), 
+                           stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","forestgreen","orange","orange")) + 
+                        labs(title="Size at metamorphosis", 
+                            x ="pCO2 Exposure", 
+                            y = "Length (um)") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(limits = c(155, 195), breaks = seq(155, 195, by = 15)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(Metamorph_MeanSE)
 
 ```
 
 
 
-```{r Two-way tests to comapre size; 14 dpf}
-# IMPORTNALTY this is four days AFTER first metamorphosis for F1s and AT FIRST metamorhposis for F2s
-#   * data: Exp2_LvM_10DPF and Exp4_LvM_14DPF
-master_14DPF <- rbind(Exp2_LvM_14DPF, Exp4_LvM_14DPF)
 
-TWanova <- lm(Length ~ Larvae_pCO2 * Generation, data= master_14DPF)
-shapiro_test(resid(TWanova)) # 0.1699191 pass
-levene_test(TWanova) # 0.2657175 pass
-TWanova_summ <- summary( aov (TWanova))
-#                        Df Sum Sq Mean Sq F value   Pr(>F)    
-# Larvae_pCO2             1    854     854   1.442    0.253    
-# Generation              1  42459   42459  71.699 2.09e-06 ***
-# Larvae_pCO2:Generation  1    115     115   0.193    0.668    
-# Residuals              12   7106     592   
+```{r output meanSE plots}
+library(ggpubr)
+ggarrange(Dstage_MeanSE,
+DPF8_MeanSE,
+Metamorph_MeanSE, nrow =3)
 
-
-master_14DPF.summ <- master_14DPF %>%
-                      dplyr::select(Larvae_pCO2, Generation, Length) %>% 
-                      na.omit() %>% 
-                      Rmisc::summarySE(measurevar="Length", groupvars="Generation")
-#     n   mean    sd     se     ci
-# F1	10	306.157	29.742119	9.405284	21.276230
-# F2	6	199.750	4.755944	1.941606	4.991057
-
-master_14DPF.summ <- master_14DPF %>%
-                      dplyr::select(Larvae_pCO2, Generation, Length) %>% 
-                      na.omit() %>% 
-                      Rmisc::summarySE(measurevar="Length", groupvars=c("Generation", "Larvae_pCO2"))
-# F1	Low pCO2	5	315.534	27.041934	12.093520	33.576996
-# F1	Moderate pCO2	5	296.780	32.237387	14.416998	40.028003
-# F2	Low pCO2	3	203.600	2.783882	1.607275	6.915547
-# F2	Moderate pCO2	3	195.900	2.080865	1.201388	5.169156
+pdf(file="Output/1_Survival_Growth/size_growth/MeanSE_2dpf_8dpf_Metamorph.pdf", height = 6, width = 3)
+plot(ggarrange(Dstage_MeanSE,
+      DPF8_MeanSE,
+      Metamorph_MeanSE, nrow =3))
+dev.off()
 ```
-
-
-
 
 
 

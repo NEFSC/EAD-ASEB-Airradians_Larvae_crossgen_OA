@@ -1512,6 +1512,7 @@ Exp4Sstage_size_summ <- summarySE(Exp4_Dstage,
                                   measurevar="Length", 
                                   groupvars=c("Age", "Larvae_pCO2"))
 
+Exp4Sstage_size_summ
 # capture output
 write.csv(Exp4_Dstage,
                file="Output/1_Survival_Growth/size_growth/Experiment4/Dstage/Experiment4_MeanLength_DstageLowvMod.csv") 
@@ -1766,6 +1767,15 @@ Dstage_MeanSE <- ggplot(master_2DPF,
 print(Dstage_MeanSE)
 
 
+Day2_GenerationEffect <- summarySE(master_2DPF, 
+                                  measurevar="Length", 
+                                  groupvars=c("Generation"))
+# F1	9	95.83889	1.802591	0.6008638	1.385594
+# F2	6	102.03333	2.651540	1.0824868	2.782621
+# ((102.03333-95.83889)/102.03333)*100 # 6.070997
+102.03333-95.83889 = 6.19444
+# ((6.19444)/102.03333)*100 # 6.070997
+
 ```
 
 ```{r Two-way tests to comapre size; 4 dpf}
@@ -1782,6 +1792,14 @@ scheirerRayHare(Length ~ Larvae_pCO2 * Generation, data= master_4DPF)
 # Generation              1  72.442 3.6221 0.05702
 # Larvae_pCO2:Generation  1   0.100 0.0050 0.94377
 # Residuals              11  89.333
+
+Day4_GenerationEffect <- summarySE(master_4DPF, 
+                                  measurevar="Length", 
+                                  groupvars=c("Larvae_pCO2"))
+# Low pCO2	8	108.6500	1.768236	0.6251657	1.478282
+# Moderate pCO2	7	105.1129	2.422001	0.9154305	2.239978
+# 108.6500-105.1129
+# ((3.5371)/108.6500)*100 == 3.255499
 ```
 
 ```{r Two-way tests to comapre size; 8 dpf}
@@ -1798,12 +1816,6 @@ TWanova_summ <- summary( aov (TWanova))
 # Generation              1 1256.9  1256.9  21.222 0.000604 ***
 # Larvae_pCO2:Generation  1   16.4    16.4   0.276 0.608592    
 # Residuals              12  710.7    59.2 
-
-Rmisc::summarySE(master_8DPF,  measurevar = 'Length',
-                  groupvars = c('Generation')
-                 )
-# F1	10	160.9910	9.259488	2.928107	6.623839
-# F2	6	  142.6833	3.304189	1.348930	3.467534
 
 DPF8_MeanSE <- ggplot(master_8DPF,
                        aes(x=Larvae_pCO2, 
@@ -1839,6 +1851,15 @@ DPF8_MeanSE <- ggplot(master_8DPF,
                               plot.title = element_text(size=12),
                               legend.position="none") 
 print(DPF8_MeanSE)
+
+Rmisc::summarySE(master_8DPF,  measurevar = 'Length',
+                  groupvars = c('Generation')
+                 )
+# F1	10	160.9910	9.259488	2.928107	6.623839
+# F2	6	  142.6833	3.304189	1.348930	3.467534
+# 160.9910 - 142.6833 # 18.3077
+# ((160.9910-18.3077)/160.9910)*100
+# 100-88.62812 # 11.37188 
 ```
 
 ```{r Two-way tests to comapre size; 10 dpf}
@@ -1856,6 +1877,16 @@ TWanova_summ <- summary( aov (TWanova))
 # Generation              1  339.2   339.2   4.863 0.0477 *
 # Larvae_pCO2:Generation  1   18.3    18.3   0.263 0.6177  
 # Residuals              12  836.9    69.7 
+
+Rmisc::summarySE(master_10DPF,  measurevar = 'Length',
+                  groupvars = c('Generation')
+                 )
+# F1 were 9.5103 larger
+# ((175.8270-166.3167)/175.8270)*100# 5.40889
+
+Rmisc::summarySE(master_10DPF,  measurevar = 'Length',
+                  groupvars = c('Larvae_pCO2')
+                 )
 ```
 
 ```{r Two-way tests to comapre size; First metamorphosis at 10 dpf F1s and at 14 dpf F2s}
@@ -1908,6 +1939,16 @@ Metamorph_MeanSE <- ggplot(master_metamorphosis,
                               plot.title = element_text(size=12),
                               legend.position="none") 
 print(Metamorph_MeanSE)
+
+
+Rmisc::summarySE(master_metamorphosis,  measurevar = 'Length',
+                  groupvars = c('Larvae_pCO2')
+                 )
+# Low pCO2	8	183.7125	6.143393	2.172017	5.136005
+# Moderate pCO2	8	171.4837	7.348885	2.598223	6.143822
+
+# 183.7125 - 171.4837 # 12.2288
+# ((12.2288)/183.7125)*100 == 6.656488 %
 
 ```
 

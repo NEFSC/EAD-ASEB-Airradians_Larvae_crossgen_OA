@@ -1348,6 +1348,42 @@ summary(TwoWay.Post_propsurv)
 # Larvae_pCO2:Generation  1 0.0536  0.0536   1.180 0.29874   
 # Residuals              12 0.5454  0.0454 
 
+
+
+# (3) proportion of those at metamorphosis that survived thereaftter
+# DIFFERENT MODELS WITHIN GENERATION AS WE HAVE 
+# METAMORPHOSIS ARRISE EARLIER IN THE F2 THAN THE SURVIVAL COUNT (MET AT 12 COUNT AT 14)
+# THEREFORE OUR 8 DAYS METRIC IS NOT STANDARDIZED AND THIS THESE SHOULD BE ADDRESSED SEPARATELY 
+# this was simply calculated by dividing the survival 
+# delta post - test the effects of larvae pCO2 and generation
+
+# filter data for themods
+F1_PrePost <- (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post' & Generation == 1))
+F2_PrePost <- (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post' & Generation == 2))
+
+# assumption tests
+(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[1] # 0.6588327 - low OA pass
+(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[2] # 0.06273204 - mod OA pass
+(F1_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 0.1082097 variance pass
+
+(F2_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[1] # 0.7955675 - low OA pass
+(F2_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[2] # 0.8315045 - mod OA pass
+(F2_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 0.1364827 variance pass
+
+# all passed lets run t test now!
+F1_Ttestmod.eqvar   <- t.test(F1_PrePost$prop_survival ~ 
+                                (as.factor(F1_PrePost$Larvae_pCO2)), 
+                                           alternative = "greater",
+                                           var.equal = TRUE)
+# t = 2.8895, df = 8, p-value = 0.01011
+
+F2_Ttestmod.eqvar   <- t.test(F2_PrePost$prop_survival ~ 
+                                (as.factor(F2_PrePost$Larvae_pCO2)), 
+                                           alternative = "greater",
+                                           var.equal = TRUE)
+# t = 1.8997, df = 4, p-value = 0.06514
+
+
 ```
 
 ```{r Plots for Pre and Post}

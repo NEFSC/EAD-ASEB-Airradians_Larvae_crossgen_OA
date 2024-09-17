@@ -19,8 +19,8 @@ because the stocking was acheived by allocateing *equal volume of counted embryo
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 ### LOAD PACKAGES
@@ -1268,7 +1268,6 @@ Exp4_Post.calc <- Exp4_PrePost %>%
 Exp4_PrePost.calc <- rbind(Exp4_Pre.calc,Exp4_Post.calc)
 ``` 
 
-
 ```{r Statistics for Pre and Post each Two-way anovas}
 # load packages 
 library(rcompanion)
@@ -1535,15 +1534,6 @@ capture.output(summary(TwoWay.Post_propsurv), file="Output/1_Survival_Growth/sur
 
 
 
-
-
-
-
-
-
-
-
-
 ## Manuscript 4; Experiment 6
 
 **output folder** = '4_F3_Full_factorial'
@@ -1564,7 +1554,8 @@ df_Exp6 <- df_Exp6 %>%
                                                 proportion >0 ~
                                                  (1/as.numeric(proportion))*
                                                  as.numeric(Count_alive)),# proportion is that of alive
-                           Count_dead = Count_total - Count_alive)
+                        Count_dead = case_when(proportion == 0 ~ 0,
+                                                proportion >0 ~ Count_total - Count_alive))
 ```
 
 ```{r convert to binary F3 Experiment #6}
@@ -1640,6 +1631,9 @@ binary_Exp6_MEANS       <- data.frame() # start dataframe
 for (i in 1:nrow(df_Exp6_MEANS)) {
    count_alive <- round(df_Exp6_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
    count_dead  <- round(df_Exp6_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
+   
+   #count_alive <- round(df_Exp6[i,]$Count_alive) # raw counts
+   #count_dead  <- round(df_Exp6[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 4, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2', 'Larvae_pCO2','Age','Count_dead'))
@@ -1723,50 +1717,50 @@ survExp6_means.high <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = bina
 
 ```
 
+
 ```{r plot Kaplan Meier F3 Experiment #6}
 
 Exp6_larvaeKaplanMeier.low <- survExp6_means.low %>% 
-                                ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                                scale_color_manual(values = c("forestgreen","orange","purple")) +
-                                scale_fill_manual(values = c("forestgreen","orange","purple")) +
-                                labs(
-                                  x = "Days",
-                                  y = "Overall survival probability"
-                                ) + 
-                                add_confidence_interval() +
-                                add_risktable() +
-                                add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                                scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                               # add_pvalue(location  = "annotation", x = 8.5)
+                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:14)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
 
 Exp6_larvaeKaplanMeier.mod <- survExp6_means.mod %>% 
-                                ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                                scale_color_manual(values = c("forestgreen","orange","purple")) +
-                                scale_fill_manual(values = c("forestgreen","orange","purple")) +
-                                labs(
-                                  x = "Days",
-                                  y = "Overall survival probability"
-                                ) + 
-                                add_confidence_interval() +
-                                add_risktable() +
-                                add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                                scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                               # add_pvalue(location  = "annotation", x = 8.5)
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:14)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
 
 Exp6_larvaeKaplanMeier.high <- survExp6_means.high %>% 
-                                ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
-                                scale_color_manual(values = c("forestgreen","orange","purple")) +
-                                scale_fill_manual(values = c("forestgreen","orange","purple")) +
-                                labs(
-                                  x = "Days",
-                                  y = "Overall survival probability"
-                                ) + 
-                                add_confidence_interval() +
-                                add_risktable() +
-                                add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                                scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                               # add_pvalue(location  = "annotation", x = 8.5)
-
+                        ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:14)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
 pdf("Output/4_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_LowParent.pdf", width=5, height = 4)
@@ -1926,6 +1920,181 @@ dev.off()
 
 
 ```
+
+
+```{r cox & hazard ratio F3 Experiment #6}
+library(survminer) # ggforect hazard ratio plot
+
+
+
+
+#  Experiment 6
+
+
+# (baseline) The 'home' condition for each parent-offspring treatment 
+binary_Exp6_larvae_baseline <- binary_Exp6_larvae %>% 
+                                        dplyr::filter(pCO2_all %in% c('Low x Low',
+                                                                      'Moderate x Moderate',
+                                                                      'High x High'))
+binary_Exp6_larvae_baseline <- droplevels(binary_Exp6_larvae_baseline)
+
+Exp6_coxph_test_baseline         <- coxph(formula = Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_baseline) 
+Exp6_hazardratio_plot_baseline   <- ggforest(Exp6_coxph_test_baseline, data = binary_Exp6_larvae_baseline)
+Exp6_coxph_test_table_baseline   <- coxph(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_baseline) %>%  
+                                          tbl_regression(exp = TRUE) 
+
+Exp6_coxme_test_baseline         <- coxme(formula = Surv(Age, Count_dead) ~ pCO2_all +
+                                     (1 | ID), data = binary_Exp6_larvae_baseline)
+Exp6_coxme_test_table_baseline   <- coxme(Surv(Age, Count_dead) ~ pCO2_all + 
+                                     (1 | ID), data = binary_Exp6_larvae_baseline) %>%  
+                                    tbl_regression(exp = TRUE) 
+
+
+
+# (LOW) Low parents ONLY look a tthe effect of exposure
+binary_Exp6_larvae_LOW <- binary_Exp6_larvae %>% 
+                                        dplyr::filter(pCO2_all %in% c('Low x Low', # reference condition, no need to relevel it
+                                                                      'Low x Moderate',
+                                                                      'Low x High'))
+binary_Exp6_larvae_LOW <- droplevels(binary_Exp6_larvae_LOW)
+
+Exp6_coxph_test_LOW         <- coxph(formula = Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_LOW) 
+Exp6_hazardratio_plot_LOW   <- ggforest(Exp6_coxph_test_LOW, data = binary_Exp6_larvae_LOW)
+Exp6_coxph_test_table_LOW   <- coxph(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_LOW) %>%  
+                                          tbl_regression(exp = TRUE) 
+
+Exp6_coxme_test_LOW         <- coxme(formula = Surv(Age, Count_dead) ~ pCO2_all +
+                                     (1 | ID), data = binary_Exp6_larvae_LOW)
+Exp6_coxme_test_table_LOW   <- coxme(Surv(Age, Count_dead) ~ pCO2_all + 
+                                     (1 | ID), data = binary_Exp6_larvae_LOW) %>%  
+                                    tbl_regression(exp = TRUE) 
+
+
+
+
+# (MOD) Moderate parents ONLY look a tthe effect of exposure
+binary_Exp6_larvae_MOD <- binary_Exp6_larvae %>% 
+                                        dplyr::filter(pCO2_all %in% c('Moderate x Low',
+                                                                      'Moderate x Moderate',
+                                                                      'Moderate x High')) %>% 
+                                        dplyr::mutate(pCO2_all=fct_relevel(pCO2_all,c("Moderate x Moderate", # relevel for moderate moderate as the refernece condition
+                                                                                      "Moderate x Low",
+                                                                                      "Moderate x High")))
+binary_Exp6_larvae_MOD <- droplevels(binary_Exp6_larvae_MOD)
+
+Exp6_coxph_test_MOD         <- coxph(formula = Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_MOD) 
+Exp6_hazardratio_plot_MOD   <- ggforest(Exp6_coxph_test_MOD, data = binary_Exp6_larvae_MOD)
+Exp6_coxph_test_table_MOD   <- coxph(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_MOD) %>%  
+                                          tbl_regression(exp = TRUE) 
+
+Exp6_coxme_test_MOD         <- coxme(formula = Surv(Age, Count_dead) ~ pCO2_all +
+                                     (1 | ID), data = binary_Exp6_larvae_MOD)
+Exp6_coxme_test_table_MOD   <- coxme(Surv(Age, Count_dead) ~ pCO2_all + 
+                                     (1 | ID), data = binary_Exp6_larvae_MOD) %>%  
+                                    tbl_regression(exp = TRUE) 
+
+
+# (HIGH) High parents ONLY look a tthe effect of exposure
+binary_Exp6_larvae_HIGH <- binary_Exp6_larvae %>% 
+                                        dplyr::filter(pCO2_all %in% c('High x Low',
+                                                                      'High x Moderate',
+                                                                      'High x High')) %>% 
+                                        dplyr::mutate(pCO2_all=fct_relevel(pCO2_all,c("High x High", # relevel for high high as the refernece condition
+                                                                                      "High x Low",
+                                                                                      "High x Moderate")))
+binary_Exp6_larvae_HIGH <- droplevels(binary_Exp6_larvae_HIGH)
+
+Exp6_coxph_test_HIGH         <- coxph(formula = Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_HIGH) 
+Exp6_hazardratio_plot_HIGH   <- ggforest(Exp6_coxph_test_HIGH, data = binary_Exp6_larvae_HIGH)
+Exp6_coxph_test_table_HIGH   <- coxph(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae_HIGH) %>%  
+                                          tbl_regression(exp = TRUE) 
+
+Exp6_coxme_test_HIGH         <- coxme(formula = Surv(Age, Count_dead) ~ pCO2_all +
+                                     (1 | ID), data = binary_Exp6_larvae_HIGH)
+Exp6_coxme_test_table_HIGH   <- coxme(Surv(Age, Count_dead) ~ pCO2_all + 
+                                     (1 | ID), data = binary_Exp6_larvae_HIGH) %>%  
+                                    tbl_regression(exp = TRUE) 
+
+
+
+
+
+# (1) Larvae_pCO2 main effect of larae exposure treatment, all parent pcO2 collapsed inside it (I dont like this model, unsure what it says)
+
+# Cox proportional hazards regression model
+Exp6_coxph_test_1         <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp6_larvae) 
+Exp6_hazardratio_plot_1   <- ggforest(Exp6_coxph_test_1, data = binary_Exp6_larvae)
+Exp6_coxph_test_table_1   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+
+# mixed Cox proportional hazards regression model
+binary_Exp6_larvae$ID <- factor(paste0(
+                              substr(binary_Exp6_larvae$Larvae_pCO2,1,1),
+                              substr(binary_Exp6_larvae$Parent_pCO2,1,1),
+                              binary_Exp6_larvae$Tank))
+
+binary_Exp6_larvae <- droplevels(binary_Exp6_larvae)
+
+Exp6_coxme_test_1         <- coxme(formula = Surv(Age, Count_dead) ~ Larvae_pCO2 +
+                                   (1 | ID), data = binary_Exp6_larvae)
+Exp6_coxme_test_table_1   <- coxme(Surv(Age, Count_dead) ~ Larvae_pCO2 + 
+                                   (1 | ID), data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+# * NOTE cannot make a hazard ratio plot with coxme (not compatible with ggforest) therefore adjust based on this output
+
+
+# output yo stuff homie!
+# capture.output(Exp4_coxph_test,file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_Survival_CoxReg_embryomet.doc")
+# 
+# write.csv(as.data.frame(Exp4_coxme_test_table),file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_Survival_CoxReg_HR_embryomet.csv")
+# 
+# pdf("Output/1_Survival_Growth/survival/Experiment4_HazardRatio.pdf", width = 10, height = 6) # three figures
+# Exp4_hazardratio_plot
+# dev.off()
+
+
+
+
+# (2) Parent_pCO2 main effect of parental treatment, all larvae pcO2 collapsed inside it
+
+# Cox proportional hazards regression model
+Exp6_coxph_test_2         <- coxph(formula = Surv(Age, Count_dead) ~ Parent_pCO2, data = binary_Exp6_larvae) 
+Exp6_hazardratio_plot_2   <- ggforest(Exp6_coxph_test_2, data = binary_Exp6_larvae)
+Exp6_coxph_test_table_2   <- coxph(Surv(Age, Count_dead) ~ Parent_pCO2, data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+
+# mixed Cox proportional hazards regression model
+
+Exp6_coxme_test_2         <- coxme(formula = Surv(Age, Count_dead) ~ Parent_pCO2 +
+                                   (1 | ID), data = binary_Exp6_larvae)
+Exp6_coxme_test_table_2   <- coxme(Surv(Age, Count_dead) ~ Parent_pCO2 + 
+                                   (1 | ID), data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+
+
+
+# (3) pCO2_all Effects together as FULL MODEL
+
+# Cox proportional hazards regression model
+Exp6_coxph_test_3         <- coxph(formula = Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae) 
+Exp6_hazardratio_plot_3   <- ggforest(Exp6_coxph_test_3, data = binary_Exp6_larvae)
+Exp6_coxph_test_table_3   <- coxph(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+
+# mixed Cox proportional hazards regression model
+
+Exp6_coxme_test_3         <- coxme(formula = Surv(Age, Count_dead) ~ pCO2_all +
+                                   (1 | ID), data = binary_Exp6_larvae)
+Exp6_coxme_test_table_3   <- coxme(Surv(Age, Count_dead) ~ pCO2_all + 
+                                   (1 | ID), data = binary_Exp6_larvae) %>%  
+                             tbl_regression(exp = TRUE) 
+
+
+
+
+```
+
+
 
 ### Mixed model - additive (main effects of parent and larvae pCO2)
 ```{r cox & hazard ratio -  F3 Experiment #6 - additive mixed model}

@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
 knitr::opts_knit$set(root.dir = 
-                       "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/") # Sam's work
+                       "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/") # Sam's work
 
 
 ```
@@ -698,14 +698,14 @@ FINAL_TABLE$pH_total_scale             <- paste( (paste( (signif(carbchem.MASTER
 #                                      ")",
 #                                      sep = "")
 
-FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_alkalinity_mmol.kgSW, digits=3)),
+FINAL_TABLE$TA             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_alkalinity_mmol.kgSW, digits=6)),
                                      (signif(carbchem.MASTER_wideStErr$Total_alkalinity_mmol.kgSW, digits=3)), sep=" ± ")),
                                      " (",
                                      carbchem.MASTER_wideN$Total_alkalinity_mmol.kgSW,
                                      ")",
                                      sep = "")
 
-FINAL_TABLE$DIC             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=3)),
+FINAL_TABLE$DIC             <- paste( (paste( (signif(carbchem.MASTER_wideMEANS$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=6)),
                                      (signif(carbchem.MASTER_wideStErr$Total_Dissolved_inorganic_carbon_mmol.kgSW, digits=3)), sep=" ± ")),
                                      " (",
                                      carbchem.MASTER_wideN$Total_Dissolved_inorganic_carbon_mmol.kgSW,
@@ -730,7 +730,7 @@ FINAL_TABLE                <- FINAL_TABLE[,-1] # view table
 
 # write.table(chem_meanDate,"C:/Users/samjg/Documents/Github_repositories/Cvirginica_multistressor/RAnalysis/Output/Water_Chem/Chem.Table_sep.csv",sep=",", row.names=FALSE)  # write table to 
 mytext <- gsub("’", "'", FINAL_TABLE )
-
+View(FINAL_TABLE)
 write.csv(FINAL_TABLE,"Output/1_Survival_Growth/Seawater_chemistry/CarbChem_Meseck_Table.csv", fileEncoding="Windows-1252", sep="," , row.names=FALSE)  # write table to 
 ```
 

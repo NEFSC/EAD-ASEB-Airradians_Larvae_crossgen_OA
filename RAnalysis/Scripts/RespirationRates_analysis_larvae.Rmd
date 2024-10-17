@@ -33,7 +33,8 @@ library(ggpubr)
 library(SciViews)
 
 # SET WORKING DIRECTORY :::::::::::::::::::::::::::::::::::::::::::::::
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis")
+# knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis")
+knitr::opts_knit$set(root.dir = 'C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis')
 
 
 ```
@@ -51,21 +52,21 @@ knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EA
 # LOAD DATA :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-RR_master <- read.csv(file="C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_raw_larvae.csv", header=T)
+RR_master <- read.csv(file="Output/Respiration/RR_calc_raw_larvae.csv", header=T)
 unique(RR_master$Date)
 
 RR_master_Exp3  <- RR_master %>% 
   dplyr::filter(Date %in% c('4/20/2022','4/22/2022')) %>% 
   dplyr::mutate(Experiment = 2)
 
-write.csv(RR_master_Exp3, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_3.csv")
+write.csv(RR_master_Exp3, "Output/Respiration/RR_calc_Experiment_3.csv")
 
 
 RR_master_Exp5  <- RR_master %>% 
   dplyr::filter(Date %in% '3/16/2023') %>% 
   dplyr::mutate(Experiment = 5)
 
-write.csv(RR_master_Exp5, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_5.csv")
+write.csv(RR_master_Exp5, "Output/Respiration/RR_calc_Experiment_5.csv")
 
 RR_master_Exp6   <- RR_master %>% 
   dplyr::filter(Date %in% c('4/7/2023', '4/12/2023','4/21/2023')) %>% 
@@ -192,7 +193,7 @@ Exp3_MeanSE <- Exp3_mean_tank  %>%
 
 
 Exp3_boxpots <- RR_master_Exp3 %>%   # omits a single dramatic outlier
-                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
                             ggplot(aes(x = factor(pCO2_offspring), 
                                        y = resp_umol_hr_indiv, 
                                        fill = pCO2_offspring)) +
@@ -220,7 +221,7 @@ Exp3_boxpots <- RR_master_Exp3 %>%   # omits a single dramatic outlier
                                                 size=0.4, 
                                                 linetype = "dashed", 
                                                 position = position_dodge(preserve = "single")) +
-                                  facet_wrap(~pCO2_parents)
+                             facet_wrap(~Date * pCO2_parents, scales = "free_y")
 
 # OUTPUT THE PLOT
 pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_MeanSE.pdf"), width = 6, height = 6)
@@ -236,9 +237,9 @@ dev.off()
 ## Statistics for Experiment # 3
 
 ```{r Experiment #3 stats}
-
+library(Rmisc)
 Exp3_mean_tank <- RR_master_Exp3 %>% 
-                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
                             dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
                             dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
                             dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
@@ -264,12 +265,12 @@ shapiro.test(resid(Exp6_OneANOVA_T1_LOW)) # 0.3005
 leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
 summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
 
-Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
-                          data=(Exp6_mean_T1 %>% 
-                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
-shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
-leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
-summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
+# Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
+#                           data=(Exp6_mean_T1 %>% 
+#                                   dplyr::filter(pCO2_parents %in% '800 uatm')))
+# shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
+# leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
+# summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
 
 Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
@@ -285,14 +286,14 @@ summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
 # time point 2  4/12/2023
 Exp3_TwoWayANOVA_T2 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
                           data=(Exp3_mean_T2))
-shapiro.test(resid(Exp3_TwoWayANOVA_T2)) # 0.1103
-leveneTest(Exp3_TwoWayANOVA_T2) # 0.8943
-summary(aov(Exp3_TwoWayANOVA_T2)) # marginal effect of pCO2 offsrping
+shapiro.test(resid(Exp3_TwoWayANOVA_T2)) # 0.4111
+leveneTest(Exp3_TwoWayANOVA_T2) # 0.7646
+summary(aov(Exp3_TwoWayANOVA_T2))
 #                             Df    Sum Sq   Mean Sq F value Pr(>F)  
 # pCO2_parents                 2 6.350e-08 3.177e-08   0.580  0.574  
 # pCO2_offspring               2 3.284e-07 1.642e-07   2.997  0.085 .
 # pCO2_parents:pCO2_offspring  4 4.573e-07 1.143e-07   2.087  0.141  
-# Residuals                   13 7.122e-07 5.479e-08
+# Residuals                   13 7.122e-07 5.479e-08   
 
 
 
@@ -306,7 +307,7 @@ summary(aov(Exp3_OneANOVA_T2_LOW)) # n.s.
 Exp3_OneANOVA_T2_MOD <- lm(mean_RR~pCO2_offspring, 
                           data=(Exp3_mean_T2 %>% 
                                   dplyr::filter(pCO2_parents %in% '800 uatm')))
-shapiro.test(resid(Exp3_OneANOVA_T2_MOD)) # no pass
+shapiro.test(resid(Exp3_OneANOVA_T2_MOD)) #  pass
 leveneTest(Exp3_OneANOVA_T2_MOD) # pass
 summary(aov(Exp3_OneANOVA_T2_MOD))
 
@@ -560,10 +561,12 @@ Exp6_barplot <- ggplot(Exp6_mean_tank) +
                               legend.position="none") +
                         facet_wrap(~Date * pCO2_parents) # scales = "free_y")
 
-Exp6_MeanSE <- Exp6_mean_tank  %>% 
-                        dplyr::filter(!mean_RR>0.0010) %>% 
+Exp6_MeanSE <- RR_master_Exp6 %>%  #Exp6_mean_tank  %>% 
+                        # dplyr::filter(!mean_RR>0.0010) %>% 
+                        dplyr::filter(!resp_umol_hr_indiv>0.0020) %>% 
                         ggplot(aes(x=pCO2_offspring, 
-                                 y=mean_RR, 
+                                 # y=mean_RR,
+                                   y = resp_umol_hr_indiv,
                                  colour=pCO2_offspring)) +
                              # scale_linetype(c("dotted","solid")) +
                              scale_colour_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
@@ -584,11 +587,11 @@ Exp6_MeanSE <- Exp6_mean_tank  %>%
                                          axis.title.x=element_text(size=7),
                                          axis.text.x=element_text(size=7),
                                          legend.position = "none") +
-                             facet_wrap(~Date * pCO2_parents)
+                             facet_wrap(~Date * pCO2_parents, scales = "free_y")
 
 
 Exp6_boxpots <- RR_master_Exp6 %>%   # omits a single dramatic outlier
-                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
                             ggplot(aes(x = factor(pCO2_offspring), 
                                        y = resp_umol_hr_indiv, 
                                        fill = pCO2_offspring)) +
@@ -634,7 +637,7 @@ dev.off()
 ```{r Experiment #5 stats}
 
 Exp6_mean_tank <- RR_master_Exp6 %>% 
-                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
                             dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
                             dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
                             dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
@@ -668,7 +671,12 @@ leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
 summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
 kruskal.test(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
-                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+                                  dplyr::filter(pCO2_parents %in% '500 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '500 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('1200 uatm', '800 uatm') ~ 'change'
+                                  )))
+             )
 
 
 Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
@@ -679,7 +687,12 @@ leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
 summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
 kruskal.test(mean_RR~pCO2_offspring, 
                           data=(Exp6_mean_T1 %>% 
-                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+                                  dplyr::filter(pCO2_parents %in% '800 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '800 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('500 uatm', '1200 uatm') ~ 'change'
+                                  )))
+             )
 
 
 Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
@@ -688,9 +701,14 @@ Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring,
 shapiro.test(resid(Exp6_OneANOVA_T1_HIGH)) # pass
 leveneTest(Exp6_OneANOVA_T1_HIGH) # pass
 summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
-kruskal.test(mean_RR~pCO2_offspring, 
+kruskal.test(mean_RR~base_change, 
                           data=(Exp6_mean_T1 %>% 
-                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '1200 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('500 uatm', '800 uatm') ~ 'change'
+                                  )))
+             )
 
 
 

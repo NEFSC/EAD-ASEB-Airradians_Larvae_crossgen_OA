@@ -12,8 +12,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 #knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
-knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 
@@ -34,7 +34,7 @@ library(nlme)
 library(lme4)
 library(multcomp)
 library(Matrix)
-
+?Matrix
 ```
 
 
@@ -805,6 +805,9 @@ lme_Exp4.emmeans.Age.letters <- multcomp::cld(object = lme_Exp4.emmeans.Age$emme
 library(DHARMa)
 # (2) GLMMs 
 
+library(lmerTest) # otherwise lme4 does not report table
+
+hist(Exp2_GLMMs$Length)
 
 # (2.1) All treatment Low, moderate, and high
 Exp2_GLMMs    <-  Exp2 %>%
@@ -818,9 +821,7 @@ str(Exp2_GLMMs)
 # RUN STATISTICAL MODEL  ::::::::::::::::::::::::::::::::::
 library(nlme)
 library(lme4)
-library(lmerTest) # otherwise lme4 does not report table
-
-hist(Exp2_GLMMs$Length)
+library(Matrix)
 
 # adjust a difference in two proportions for confounders: 
 # to do so, you would run a logistic GLM with identity link.

@@ -532,10 +532,10 @@ Exp2_larvaeKaplanMeier.age <- survExp2_all %>%
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
-                        # add_risktable() +
-                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
-                        scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
-                       # add_pvalue(location  = "annotation", x = 8.5)
+                        #add_risktable() +
+                        #add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        #scale_ggsurvfit(x_scales = list(breaks = 0:10)) #+
+                        add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
 pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Expeirment2_Survival_KaplanMeier_age_embryomet.pdf", width=5, height = 4)
@@ -551,7 +551,7 @@ Exp2_larvaeKaplanMeier.prop <- survExp2_proptime %>%
                           y = "Overall survival probability"
                         ) + 
                         add_confidence_interval() +
-                        # add_risktable() +
+                        add_risktable() +
                         # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
                         scale_ggsurvfit(x_scales = list(breaks = 0:1)) #+
                        # add_pvalue(location  = "annotation", x = 8.5)

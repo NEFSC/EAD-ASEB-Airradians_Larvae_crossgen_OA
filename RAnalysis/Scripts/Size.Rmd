@@ -850,16 +850,55 @@ car::Anova(Exp2_GLMM_all, type=3)
 
 
 # LMM via lme4 and nlme
-Exp2_LMM.lme4 <- lme4::lmer(
+# ?lmerTest
+?lmerTest
+?lmer
+Exp2_LMM.lme4 <- lmerTest::lmer(
               Length ~ 
                 Larvae_pCO2 * Age + (1 | ID), 
                           data = Exp2_GLMMs,
               )
+?ranova
+ranova(Exp2_LMM.lme4) # 0.1048, tests for removal of the random term to simpler structure
+# includsion of the random effect does not alter the model, keep
 anova(Exp2_LMM.lme4)
-#                 npar Sum Sq Mean Sq F value
-# Larvae_pCO2        2  11243  5621.7  78.477
-# Age                3  44134 14711.4 205.366
-# Larvae_pCO2:Age    6   4788   798.0  11.140
+# Type III Analysis of Variance Table with Satterthwaite's method
+#                 Sum Sq Mean Sq NumDF   DenDF F value    Pr(>F)    
+# Larvae_pCO2      11231  5615.7     2  9.3667  78.393 1.415e-06 ***
+# Age              42529 14176.2     3 30.1262 197.894 < 2.2e-16 ***
+# Larvae_pCO2:Age   4788   798.0     6 30.1027  11.140 1.559e-06 ***
+?ls_means
+ls_means_LarvepCO2 <- lmerTest::ls_means(Exp2_LMM.lme4,
+                               which = 'Larvae_pCO2',
+                               level = 0.95,
+                               ddf = 'Satterthwaite',
+                               # ddf = "Kenward-Roger",
+                               pairwise = TRUE)
+#                                                 Estimate Std. Error   df t value   lower   upper  Pr(>|t|)    
+# Larvae_pCO2Low pCO2 - Larvae_pCO2Moderate pCO2    7.1631     4.3580 11.6  1.6437 -2.3695 16.6956    0.1271    
+# Larvae_pCO2Low pCO2 - Larvae_pCO2High pCO2       50.7452     4.3580 11.6 11.6442 41.2127 60.2777 9.527e-08 ***
+# Larvae_pCO2Moderate pCO2 - Larvae_pCO2High pCO2  43.5821     4.4385 12.2  9.8192 33.9250 53.2393 3.924e-07 ***
+
+ls_means_Age <- ls_means(Exp2_LMM.lme4, 
+                               which = 'Age', 
+                               level = 0.95,
+                               ddf = "Satterthwaite",
+                               pairwise = TRUE)
+#              Estimate Std. Error   df  t value    lower    upper  Pr(>|t|)    
+# Age2 - Age4   -9.0077     3.3381 29.4  -2.6984 -15.8311  -2.1842 0.0114294 *  
+# Age2 - Age8  -53.7014     3.2436 30.5 -16.5559 -60.3208 -47.0819 < 2.2e-16 ***
+# Age2 - Age10 -65.8240     3.2436 30.5 -20.2933 -72.4435 -59.2045 < 2.2e-16 ***
+# Age4 - Age8  -44.6937     3.2436 30.5 -13.7789 -51.3132 -38.0742 1.201e-14 ***
+# Age4 - Age10 -56.8164     3.2436 30.5 -17.5162 -63.4358 -50.1969 < 2.2e-16 ***
+# Age8 - Age10 -12.1227     3.0905 29.4  -3.9225 -18.4400  -5.8054 0.0004852 ***
+
+ls_means_pCO2XAge <- ls_means(Exp2_LMM.lme4, 
+                               which = 'Larvae_pCO2:Age', 
+                               level = 0.95,
+                               ddf = "Satterthwaite")
+
+
+
 
 Exp2_LMM.nlme <- nlme::lme(
               Length ~ 
@@ -962,19 +1001,9 @@ cld(lsm_Exp2.all.AgeXOA, Letters=letters)
 library(lsmeans)
 library(emmeans)
 library(multcomp)
-lsm_Exp2.LMM.Age <- lsmeans(Exp2_LMM.nlme,list(pairwise~Age),adjust="tukey") # does the Tukey Kramer
+lsm_Exp2.LMM.Age <- lsmeans(Exp2_LMM.lme4,list(pairwise~Age),adjust="tukey") # does the Tukey Kramer
 cld(lsm_Exp2.LMM.Age, Letters=letters)
  # Age lsmean   SE df lower.CL upper.CL .group
- # 2     86.4 2.76 12     80.4     92.4  a    
- # 4     95.4 2.76 12     89.4    101.4  a    
- # 8    140.1 2.57 12    134.5    145.7   b   
- # 10   152.2 2.57 12    146.6    157.8    c  
-
-emm_Exp2.LMM.Age <- emmeans(Exp2_LMM.nlme, 
-                                  pairwise ~ "Age",
-                                    adjust = "tukey") # does the Tukey Kramer
-cld(emm_Exp2.LMM.Age, Letters=letters)
- # Age emmean   SE df lower.CL upper.CL .group
  # 2     86.4 2.76 12     80.4     92.4  a    
  # 4     95.4 2.76 12     89.4    101.4  a    
  # 8    140.1 2.57 12    134.5    145.7   b   
@@ -1041,16 +1070,32 @@ summary(Exp2_GLMM_LowvMod)
 
 
 # LMM via lme4 and nlme
-Exp2_LMM_LvM.lme4 <- lme4::lmer(
+Exp2_LMM_LvM.lme4 <- lmerTest::lmer(
               Length ~ 
                 Larvae_pCO2 * Age + (1 | ID), 
                           data = Exp2_GLMMs_LowvMod,
               )
+ranova(Exp2_LMM_LvM.lme4) # 0.02235 * without the random factor improves the model
 anova(Exp2_LMM_LvM.lme4)
-#                 npar Sum Sq Mean Sq  F value
-# Larvae_pCO2        1      6     6.3   0.2791
-# Age                3  44982 14994.0 661.3229
-# Larvae_pCO2:Age    3    103    34.3   1.5117
+# Type III Analysis of Variance Table with Satterthwaite's method
+#                 Sum Sq Mean Sq NumDF   DenDF  F value  Pr(>F)    
+# Larvae_pCO2        111   111.4     1  6.5849   4.9142 0.06456 .  
+# Age              44315 14771.8     3 20.7369 651.5230 < 2e-16 ***
+# Larvae_pCO2:Age    103    34.3     3 20.7369   1.5117 0.24100  
+
+Exp2_LM_LvM <- lm(
+              Length ~ 
+                Larvae_pCO2 * Age, 
+                          data = Exp2_GLMMs_LowvMod,
+              )
+anova(Exp2_LM_LvM)
+# Response: Length
+#                 Df Sum Sq Mean Sq  F value Pr(>F)    
+# Larvae_pCO2      1     81    80.7   1.9851 0.1691    
+# Age              3  45102 15033.9 369.8535 <2e-16 ***
+# Larvae_pCO2:Age  3    157    52.4   1.2887 0.2963    
+# Residuals       30   1219    40.6 
+
 
 Exp2_LMM_LvM.nlme <- nlme::lme(
               Length ~ 
@@ -1172,17 +1217,21 @@ car::Anova(Exp4_GLMM, type=3)
 
 
 # LMM via lme4 and nlme
-Exp4_LMM.lme4 <- lme4::lmer(
+Exp4_LMM.lme4 <- lmerTest::lmer(
               Length ~ 
                 Larvae_pCO2 * Age + (1 | ID), 
                           data = Exp4_GLMMs,
               )
 anova(Exp4_LMM.lme4)
-# Analysis of Variance Table
-#                 npar  Sum Sq Mean Sq  F value
-# Larvae_pCO2        1   100.1   100.1   6.5903
-# Age                5 29241.3  5848.3 385.0594
-# Larvae_pCO2:Age    5   103.9    20.8   1.3685
+# Type III Analysis of Variance Table with Satterthwaite's method
+#                  Sum Sq Mean Sq NumDF DenDF  F value  Pr(>F)    
+# Larvae_pCO2       100.1   100.1     1     4   6.5903 0.06217 .  
+# Age             29241.3  5848.3     5    20 385.0594 < 2e-16 ***
+# Larvae_pCO2:Age   103.9    20.8     5    20   1.3685 0.27779 
+ranova(Exp4_LMM.lme4) # 0.2245
+
+lmerTest::ls_means(Exp4_LMM.lme4, which = 'Age', pairwise = TRUE)
+
 
 Exp4_LMM.nlme <- nlme::lme(
               Length ~ 
@@ -1352,19 +1401,6 @@ Exp2_Dstage_LvM <-  Exp2 %>%
 
 write.csv(Exp2_Dstage_LvM,
                file="Output/1_Survival_Growth/size_growth/Experiment2/Dstage/Experiment2_MeanLength_DstageLowvMod.csv") 
-
-# * run one way anova 
-Exp2_AOV_res.mod <- lm(Length~Larvae_pCO2,data=Exp2_Dstage_LvM)
-
-# * check model assumptions 
-shapiro.test(resid(Exp2_AOV_res.mod)) # 0.1038
-leveneTest(Exp2_AOV_res.mod) # 0.6366
-
-# * print the summary aov
-summary(aov(Exp2_AOV_res.mod))
-#             Df Sum Sq Mean Sq F value Pr(>F)  
-# Larvae_pCO2  1  10.65  10.653   4.861 0.0633 .
-# Residuals    7  15.34   2.192
 
 
 # T test
@@ -1769,7 +1805,12 @@ TWanova_summ <- summary( aov (TWanova))
 # Generation              1 143.13  143.13  36.054 8.87e-05 ***
 # Larvae_pCO2:Generation  1   0.00    0.00   0.001    0.104    
 # Residuals              11  43.67    3.97
-
+scheirerRayHare(Length ~ Larvae_pCO2 * Generation, data= master_2DPF)
+#                        Df  Sum Sq      H p.value
+# Larvae_pCO2             1  48.160 2.4080 0.12072
+# Generation              1 183.200 9.1600 0.00247
+# Larvae_pCO2:Generation  1   0.896 0.0448 0.83242
+# Residuals              11  57.333   
 
 Dstage_MeanSE <- ggplot(master_2DPF,
                        aes(x=Larvae_pCO2, 

@@ -19,8 +19,8 @@ because the stocking was acheived by allocateing *equal volume of counted embryo
 knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
-#knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 ### LOAD PACKAGES
@@ -195,11 +195,11 @@ Exp2_larvae_PlotMeanSE
 
 write.csv(stL_Exp2,"Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Mean_Survival_embryomet.csv")
 
-pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_F1larvae_Survival_MeanSE_embryomet.pdf", width=10, height=5)
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_F1larvae_Survival_MeanSE_embryomet.pdf", width=5, height=5)
 print(Exp2_larvae_PlotMeanSE)
 dev.off()
 
-pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_F1_Survival_MeanSE_embryomet.pdf", width=10, height=5)
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_F1_Survival_MeanSE_embryomet.pdf", width=5, height=5)
 print(Exp2_PlotMeanSE)
 dev.off()
 ```
@@ -247,11 +247,11 @@ Exp4_larvae_PlotMeanSE
 
 write.csv(stL_Exp4,"Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_Mean_Survival_embryomet.csv")
 
-pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_F2larvae_Survival_MeanSE_embryomet.pdf", width=10, height=5)
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_F2larvae_Survival_MeanSE_embryomet.pdf", width=5, height=5)
 print(Exp4_larvae_PlotMeanSE)
 dev.off()
 
-pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_F2_Survival_MeanSE_embryomet.pdf", width=10, height=5)
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment4_F2_Survival_MeanSE_embryomet.pdf", width=5, height=5)
 print(Exp4_PlotMeanSE)
 dev.off()
 ```
@@ -359,10 +359,14 @@ to cater to this difference to make meaningful comparisons
 
 ### Experiment 2 F1s
 
+# note: as of 10/17/2024 we converted the percent survival data to a whole number of individuals alive and dead 
+# to run the Kaplan Meier and the Mixed cox proportional hazards models, this decision was made 
+# to understand why the survival probability differs from the raw percent survival - I found this data had no change in the 
+# kaplan meier at all
 
 ```{r format F1 Experiment #2}
 # create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
-df_Exp2 <- df_Exp2 %>% 
+df_Exp2_rawvalues <- df_Exp2 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
           dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
@@ -372,6 +376,22 @@ df_Exp2 <- df_Exp2 %>%
                                                  (1/as.numeric(proportion))*
                                                  as.numeric(Count_alive)),# proportion is that of alive
                            Count_dead = Count_total - Count_alive)
+
+
+df_Exp2_norm_100 <- df_Exp2 %>% 
+          dplyr::mutate(Count = 
+                          as.numeric(gsub(",","",Count)),
+                        Count_norm_100 = round(proportion_rel_stocking*100)) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::rename(Count_alive = Count_norm_100) %>% # rename to avoid confusion
+          dplyr::mutate(proportion = Percent_Survival/100,
+                        Count_total = round(case_when(proportion == 0 ~ 0,
+                                                proportion >0 ~ 100)),# proportion is that of alive
+                           Count_dead = round(Count_total - Count_alive))
+
+
+df_Exp2$Count_alive + df_Exp2$Count_dead
+# Look at the calculated stocking density, we expect there to be 238,160 for all replicates excet for moderate E (tank 10 
+# at 224,420)
 ```
 
 ```{r convert to binary F1 Experiment #2}
@@ -380,23 +400,25 @@ df_Exp2 <- df_Exp2 %>%
 
 # Call the cumulative dataframe that we will write to in the for loop below
 binary_Exp2_all     <- data.frame() # start dataframe  - all
+
+
 # run it 
-for (i in 1:nrow(df_Exp2)) {
-   count_alive <- round(df_Exp2[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp2[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
+for (i in 1:nrow(df_Exp2_norm_100)) {
+   #count_alive <- round(df_Exp2[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
+   #count_dead  <- round(df_Exp2[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
    
-   #count_alive <- round(df_Exp2[i,]$Count_alive) # raw counts
-   #count_dead  <- round(df_Exp2[i,]$Count_dead)  # raw counts
+   count_alive <- round(df_Exp2_norm_100[i,]$Count_alive) # raw counts
+   count_dead  <- round(df_Exp2_norm_100[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
-                            Parent_pCO2 = df_Exp2[i,]$Parent_pCO2,
-                            Larvae_pCO2 = df_Exp2[i,]$Larvae_pCO2,
-                            Generation  = df_Exp2[i,]$Generation,
-                            Tank        = df_Exp2[i,]$Tank,  
-                            Age         = df_Exp2[i,]$Age,
+                            Parent_pCO2 = df_Exp2_norm_100[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_Exp2_norm_100[i,]$Larvae_pCO2,
+                            Generation  = df_Exp2_norm_100[i,]$Generation,
+                            Tank        = df_Exp2_norm_100[i,]$Tank,  
+                            Age         = df_Exp2_norm_100[i,]$Age,
                           ) 
   loopDF[c(1:count_dead),6] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
@@ -415,14 +437,17 @@ binary_Exp2_all <- binary_Exp2_all %>%
                                                    Tank== 'E'~5)) %>% 
                     na.omit()
 
+binary_Exp2_all %>% 
+  group_by(Larvae_pCO2, Age, Tank, Count_dead) %>% 
+  dplyr::summarise(n = n())
 
 # (2) Mean counts alive and dead by tank - better representated for plots!
 # difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
-df_Exp2_MEANS <- df_Exp2 %>% 
+df_Exp2_MEANS <- df_Exp2_norm_100 %>% 
               dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
               dplyr::group_by(Larvae_pCO2, Age) %>% 
-              dplyr::summarise(mean_Count_alive = mean(Count_alive), 
-                               mean_Count_dead = mean(Count_dead))
+              dplyr::summarise(mean_Count_alive = round(mean(Count_alive)), 
+                               mean_Count_dead = round(mean(Count_dead)))
 
 # call datafarme binary for plotting
 binary_Exp2_MEANS       <- data.frame() # start dataframe 
@@ -454,6 +479,10 @@ binary_Exp2_MEANS <- binary_Exp2_MEANS %>%
                       dplyr::mutate(Generation = 1) %>% 
                       na.omit()
 
+
+binary_Exp2_MEANS %>% 
+  group_by(Larvae_pCO2, Age, Count_dead) %>% 
+  dplyr::summarise(n = n())
 # test whether 0s and 1s do pan out to the count dead and alive
 # length((binary_Exp2_all %>% dplyr::filter(c(Tank %in% '1' & Age == 4 & Larvae_pCO2 %in% 'Low pCO2' & Count_dead == 1)))$Count_dead)
 # length((binary_Exp2_all %>% dplyr::filter(c(Tank %in% '1' & Age == 4 & Larvae_pCO2 %in% 'Low pCO2' & Count_dead == 0)))$Count_dead)
@@ -473,10 +502,16 @@ binary_Exp2_larvaeMEANS <- binary_Exp2_MEANS %>% filter(Age <=10)  %>% # F1 - al
 ```
 
 ```{r surv object F1 Experiment #2}
+binary_Exp2_larvaeMEANS %>% 
+  group_by(Larvae_pCO2, Age, Count_dead) %>% 
+  filter(Count_dead == 1) %>% 
+  dplyr::summarise(n = n())
 
-survExp2_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
 
-
+survExp2_all <- survfit2(Surv(Age, Count_dead) ~ 
+                           Larvae_pCO2,
+                         data = binary_Exp2_larvaeMEANS)
+summary(survExp2_all)
 # convert Age to the proportion of time to metamorphosis 
 # binary_Exp2_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp2_larvaeMEANS$Age / 10)
 
@@ -488,7 +523,7 @@ survExp2_proptime <- survfit2(Surv(Prop_time_metamophosis, Count_dead) ~ Larvae_
 
 ```{r plot Kaplan Meier F1 Experiment #2}
 
-Exp2_larvaeKaplanMeier.age <- survExp2 %>% 
+Exp2_larvaeKaplanMeier.age <- survExp2_all %>% 
                         ggsurvfit(linetype_aes = TRUE, linewidth = 1,type ="survival") +
                         scale_color_manual(values = c("forestgreen","orange","purple")) +
                         scale_fill_manual(values = c("forestgreen","orange","purple")) +
@@ -615,7 +650,7 @@ dev.off()
 
 ```{r format F2 Experiment #4}
 # create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
-df_Exp4 <- df_Exp4 %>% 
+df_Exp4_rawvalues <- df_Exp4 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
           dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
@@ -626,6 +661,23 @@ df_Exp4 <- df_Exp4 %>%
                                                  as.numeric(Count_alive)),# proportion is that of alive
                         Count_dead = case_when(proportion == 0 ~ 0,
                                                 proportion >0 ~ Count_total - Count_alive))
+
+
+df_Exp4_norm_100 <- df_Exp4 %>% 
+          dplyr::mutate(Count = 
+                          as.numeric(gsub(",","",Count)),
+                        Count_norm_100 = round(proportion_rel_stocking*100)) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::rename(Count_alive = Count_norm_100) %>% # rename to avoid confusion
+          dplyr::mutate(proportion = Percent_Survival/100,
+                        Count_total = round(case_when(proportion == 0 ~ 0,
+                                                proportion >0 ~ 100)),# proportion is that of alive
+                           Count_dead = round(Count_total - Count_alive))
+
+
+
+df_Exp4_rawvalues$Count_alive + df_Exp4_rawvalues$Count_dead
+# Look at the calculated stocking density, we expect all low tanks to be 203,077 and all moderate tanks to be 440085
+# there is some variation due to significant figures in the master excel sheet
 ```
 
 ```{r convert to binary F2 Experiment #4}
@@ -635,9 +687,9 @@ df_Exp4 <- df_Exp4 %>%
 # Call the cumulative dataframe that we will write to in the for loop below
 binary_Exp4_all     <- data.frame() # start dataframe  - all
 # run it 
-for (i in 1:nrow(df_Exp4)) {
-   count_alive <- round(df_Exp4[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp4[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
+for (i in 1:nrow(df_Exp4_norm_100)) {
+   count_alive <- round(df_Exp4_norm_100[i,]$Count_alive) # divide all counts by 1000, round to nearest
+   count_dead  <- round(df_Exp4_norm_100[i,]$Count_dead)  # divide all counts by 1000, round to nearest
    
    #count_alive <- round(df_Exp4[i,]$Count_alive) # raw counts
    #count_dead  <- round(df_Exp4[i,]$Count_dead)  # raw counts
@@ -646,11 +698,11 @@ for (i in 1:nrow(df_Exp4)) {
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
    loopDF           <- loopDF %>% 
                             dplyr::mutate(
-                            Parent_pCO2 = df_Exp4[i,]$Parent_pCO2,
-                            Larvae_pCO2 = df_Exp4[i,]$Larvae_pCO2,
-                            Generation  = df_Exp4[i,]$Generation,
-                            Tank        = df_Exp4[i,]$Tank,  
-                            Age         = df_Exp4[i,]$Age,
+                            Parent_pCO2 = df_Exp4_norm_100[i,]$Parent_pCO2,
+                            Larvae_pCO2 = df_Exp4_norm_100[i,]$Larvae_pCO2,
+                            Generation  = df_Exp4_norm_100[i,]$Generation,
+                            Tank        = df_Exp4_norm_100[i,]$Tank,  
+                            Age         = df_Exp4_norm_100[i,]$Age,
                           ) 
   loopDF[c(1:count_dead),6] = 1 # 1 for dead 
   loopDF[c((count_dead + 1):nrow(loopDF)),6] = 0 # 0 for alive
@@ -672,9 +724,13 @@ binary_Exp4_all <- binary_Exp4_all %>%
                     na.omit()
 
 
+binary_Exp4_all %>% 
+  group_by(Larvae_pCO2, Age, Tank, Count_dead) %>% 
+  dplyr::summarise(n = n())
+
 # (2) Mean counts alive and dead by tank - better representated for plots!
 # difference here is we take a mean for counts alive and dead within treatment, no tank included and a singluar line for plotting 
-df_Exp4_MEANS <- df_Exp4 %>% 
+df_Exp4_MEANS <- df_Exp4_norm_100 %>% 
               dplyr::select(-c(Generation, Tank, Date, Percent_Survival, proportion)) %>% 
               dplyr::group_by(Larvae_pCO2, Age) %>% 
               dplyr::summarise(mean_Count_alive = mean(Count_alive), 
@@ -723,8 +779,13 @@ binary_Exp4_larvaeMEANS <- binary_Exp4_MEANS %>% filter(Age <=14) %>% # F1 - ali
 
 ```{r surv object F2 Experiment #4}
 
-survExp4_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+binary_Exp4_larvaeMEANS %>% 
+  group_by(Larvae_pCO2, Age, Count_dead) %>% 
+  filter(Count_dead == 1) %>% 
+  dplyr::summarise(n = n())
 
+survExp4_all <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
+summary(survExp4_all)
 # convert Age to the proportion of time to metamorphosis 
 binary_Exp4_larvaeMEANS$Prop_time_metamophosis <- (binary_Exp4_larvaeMEANS$Age / 12)
 
@@ -1702,6 +1763,11 @@ unique(binary_Exp6_larvaeMEANS$pCO2_all)
 # all
 survExp6_all   <- survfit2(Surv(Age, Count_dead) ~ pCO2_all, data = binary_Exp6_larvae)
 
+
+# all
+survExp6_parent   <- survfit2(Surv(Age, Count_dead) ~ Parent_pCO2, data = binary_Exp6_larvae)
+
+
 # all based on parental 
 survExp6_all.low   <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp6_larvae_LOW)
 survExp6_all.mod   <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp6_larvae_MOD)
@@ -1719,6 +1785,20 @@ survExp6_means.high <- survfit2(Surv(Age, Count_dead) ~ Larvae_pCO2, data = bina
 
 
 ```{r plot Kaplan Meier F3 Experiment #6}
+
+Exp6_larvaeKaplanMeier.parent <- survExp6_parent %>% 
+                         ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
+                        scale_color_manual(values = c("forestgreen","orange","purple")) +
+                        scale_fill_manual(values = c("forestgreen","orange","purple")) +
+                        labs(
+                          x = "Days",
+                          y = "Overall survival probability"
+                        ) + 
+                        add_confidence_interval() +
+                        # add_risktable() +
+                        # add_risktable_strata_symbol() + # (symbol = "\U25CF", size = 10
+                        scale_ggsurvfit(x_scales = list(breaks = 0:14)) #+
+                       # add_pvalue(location  = "annotation", x = 8.5)
 
 Exp6_larvaeKaplanMeier.low <- survExp6_means.low %>% 
                          ggsurvfit(linetype_aes = TRUE, linewidth = 1) +
@@ -1763,15 +1843,19 @@ Exp6_larvaeKaplanMeier.high <- survExp6_means.high %>%
                        # add_pvalue(location  = "annotation", x = 8.5)
 
 # plot the surv data
-pdf("Output/4_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_LowParent.pdf", width=5, height = 4)
+pdf("Output/3_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_Parent_all.pdf", width=5, height = 4)
+Exp6_larvaeKaplanMeier.parent
+dev.off()
+
+pdf("Output/3_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_LowParent.pdf", width=5, height = 4)
 Exp6_larvaeKaplanMeier.low
 dev.off()
 
-pdf("Output/4_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_ModParent.pdf", width=5, height = 4)
+pdf("Output/3_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_ModParent.pdf", width=5, height = 4)
 Exp6_larvaeKaplanMeier.mod
 dev.off()
 
-pdf("Output/4_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_HighParent.pdf", width=5, height = 4)
+pdf("Output/3_F3_Full_factorial/survival/embryo_to_metamorphosis/Expeirment6_Survival_KaplanMeier_HighParent.pdf", width=5, height = 4)
 Exp6_larvaeKaplanMeier.high
 dev.off()
 

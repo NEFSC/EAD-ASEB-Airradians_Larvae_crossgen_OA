@@ -1,0 +1,8 @@
+                        Df  Sum Sq Mean Sq F value  Pr(>F)   
+Larvae_pCO2              2 0.17830 0.08915   6.388 0.00853 **
+Parent_pCO2              2 0.01225 0.00612   0.439 0.65193   
+Larvae_pCO2:Parent_pCO2  4 0.12531 0.03133   2.245 0.10708   
+Residuals               17 0.23724 0.01396                   
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+1 observation deleted due to missingness

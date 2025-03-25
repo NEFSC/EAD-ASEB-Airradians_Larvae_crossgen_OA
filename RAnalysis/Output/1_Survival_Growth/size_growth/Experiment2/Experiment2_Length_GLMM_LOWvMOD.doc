@@ -1,0 +1,10 @@
+Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: Length
+                    Chisq Df Pr(>Chisq)    
+(Intercept)     1137.5439  1    < 2e-16 ***
+Larvae_pCO2        1.7389  1    0.18727    
+Age             1874.2950  3    < 2e-16 ***
+Larvae_pCO2:Age    6.3016  3    0.09782 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

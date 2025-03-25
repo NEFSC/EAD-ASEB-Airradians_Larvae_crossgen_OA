@@ -1,0 +1,1689 @@
+---
+title: "Bay Scallop Larve - D Stage Abnormality Rates"
+author: "Katie McFarland"
+date: "12/13/2022"
+output: html_document
+---
+
+# 20231217 - started manuscript Github repostiory 'EAD-ASEB-Airradians_Larvae_crossgen_OA'
+# SGurr edits
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# SET WORKING DIRECTORY 
+#knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Katie's
+knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+#knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
+
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(rcompanion)
+library(FSA)
+library(car)
+library(forcats)
+library(kableExtra) # nice Rmd tables
+library(emmeans)
+library(ggpubr)
+library(lmtest)
+```
+
+### Load Data as df
+```{r}
+#Here we are assing our data fram the name "df" so that we do not have to type out the full file name everytime we want to call it.
+df<-read.csv("Data/Dstage.data.csv", header = T) %>% 
+  # change to numeric for the DV and as factor for IDVs
+  dplyr::mutate(Percent.deformed = as.numeric(Percent.deformed),
+                Rep              = as.factor(Rep),
+                Year             = as.factor(Year),
+                Run              = as.factor(Run)) %>% 
+  
+  # rename the variables for consistancy using 'case_when'
+  dplyr::mutate(Parent = case_when(Parent ==  "LOW" ~ "Low pCO2", 
+                                   Parent ==  "MODERATE" ~ "Moderate pCO2", 
+                                   Parent ==  "HIGH" ~ "High pCO2")) %>% 
+  dplyr::mutate(Treatment = case_when(Treatment ==  "Low OA" ~ "Low pCO2", 
+                                      Treatment ==  "Moderate OA" ~ "Moderate pCO2", 
+                                      Treatment ==  "High OA" ~ "High pCO2")) %>% 
+  
+  # change the levels for order when plotting - call as factors too!
+  dplyr::mutate(Parent = as.factor(forcats::fct_relevel(Parent, 
+                                                        c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
+  dplyr::mutate(Treatment = as.factor(forcats::fct_relevel(Treatment, 
+                                                           c("Low pCO2", "Moderate pCO2", "High pCO2")))) %>% 
+  
+  # rename them
+  dplyr::rename(Parent_pCO2 = Parent,
+                Larvae_pCO2 = Treatment,
+                Expeirment  = Run) # done 
+
+
+#to look at columns names of your data frame
+head(df)
+
+#Sturcture of the data - to check that variables are properly assigned to facotr or variable
+str(df)
+```
+
+# About data 
+
+### Summary: 
+
+  - (1) F1 larvae under three OA levels, *no grow out*
+
+  - (2) F1 larvae under three OA levels, *grown out to adult stage*
+
+  - (3) F2 larvae full cross 3 x 3 parent x offspring OA, *no grow out*
+
+  - (4) F2 larvae under two OA levels, *grown out to adult stage*
+
+  - (5) F2 larvae under 3 x 3 parent x offspring OA, *no grow out*
+
+  - (6) F3 larvae under 3 x 3 parent x offsring OA, *no grow out past juvenile takedown of the experiment*
+
+### * NOTE: N = 3 for Runs 3 and 6 for parental x offspring pCO2 treamtents 
+
+```{r about data}
+
+# number of runs 
+unique(df$Expeirment) # 1,2,3,4,6 - what are these?
+unique(df$Generation) # 1, 2, 3 - generations for larval exposures 
+
+# Lets just see our replication strength per treatment in this summary file..
+Rep_Summary_all <- df %>% dplyr::select(c(Generation, Year,  Expeirment, Parent_pCO2, Larvae_pCO2)) %>% 
+                           dplyr::group_by_all() %>% 
+                           dplyr::summarise(n=n())
+
+unique(Rep_Summary_all$n) # we see 3-5 reps per treatment, veery niiiice!
+
+# print the runs
+# summary: 
+# Expeirment 1 and 2 == Generation 1 matched parent x offspring exposure for the multigenerational rearing 
+# Expeirment 3 == Generation 2  full cross parent x offspring exposure *** TARGET FOR THIS PAPER! 
+# Expeirment 4 == Generation 2 matched parent x offspring exposure for the multigenerational rearing 
+# Expeirment 6 == Generation 3  full cross parent x offspring exposure *** TARGET FOR THIS PAPER! 
+
+Rep_Summary_E1 <- Rep_Summary_all %>%  dplyr::filter(Expeirment %in% 1) # larval [hase pf ] grow out multigenerational
+Rep_Summary_E1 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+Rep_Summary_E2 <- Rep_Summary_all %>%  dplyr::filter(Expeirment %in% 2) # larval phase of grow out multigenerational
+Rep_Summary_E2 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+Rep_Summary_E3 <- Rep_Summary_all %>%  dplyr::filter(Expeirment %in% 3) #  full cross design 
+Rep_Summary_E3 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+Rep_Summary_E4 <- Rep_Summary_all %>%  dplyr::filter(Expeirment %in% 4) # larval phase of grow out multigenerational
+Rep_Summary_E4 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+Rep_Summary_E6 <- Rep_Summary_all %>%  dplyr::filter(Expeirment %in% 6) # full cross design - match parent x pffspring contributed to F3s juvenile grow out
+Rep_Summary_E6 %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+# Divide and conquer - we have 6 different experimens as follows:
+
+```{r what expeirments do we have data for?}
+unique(df$Expeirment)
+# 1 2 3 4 6
+```
+    
+  
+```{r call target datasets}
+
+df_Exp1 <- df %>% filter(Expeirment=="1") # F1 three OA 
+df_Exp2 <- df %>% filter(Expeirment=="2") # F1 three OA, repeated
+df_Exp3 <- df %>% filter(Expeirment=="3") # F2 full factorial
+df_Exp4 <- df %>% filter(Expeirment=="4") # F2 two OA 
+df_Exp6 <- df %>% filter(Expeirment=="6") # F3 - full factorial
+```
+
+# Plot data as barplots mean +- SE for each run
+
+## Manuscript 2; Expeirments 1,2 and 4
+
+**output folder** = '2_Dstage_Shell_Abnormalities'
+
+```{r Mean table + plots; F1 Experiment #1}
+
+# Summarise Percent Deformities for plotting 
+# Remember - we DO NOT need the Parent_pCO2 column here - just Larvae pCO2
+Exp1_mean_deformaties <- df_Exp1 %>% 
+                          dplyr::select(Larvae_pCO2,Percent.deformed) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Larvae_pCO2) %>% 
+                          dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                           n           = n(),
+                                           sd_Perc_def   = sd(Percent.deformed),
+                                           se_Perc_def   = sd_Perc_def/(sqrt(n)))
+# kable read the head of this for pdf knit
+Exp1_mean_deformaties %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+# Barplots
+Exp1_barplot <- ggplot(Exp1_mean_deformaties) +
+                        geom_errorbar(aes(x=Larvae_pCO2, 
+                                           ymin=mean_Perc_def-se_Perc_def, 
+                                           ymax=mean_Perc_def+se_Perc_def), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #1 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp1_barplot)
+
+
+# Boxplot
+Exp1_boxplot <- ggplot(df_Exp1,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                        geom_boxplot() +
+                        geom_jitter(width = 0.25) +
+                        labs(title="Experiment #1 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                           values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp1_boxplot)
+
+# MEan SE
+Exp1_MeanSE <- ggplot(df_Exp1,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","orange", "purple")) + 
+                        labs(title="Experiment #1 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Proportion Abnormalities") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                           values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(Exp1_MeanSE)
+
+
+# output yo stuff homie!
+write.csv(Exp1_mean_deformaties,"Output/2_Dstage_Shell_Abnormalities/Experiment1_Mean_Abnormalities.csv")
+
+pdf("Output/2_Dstage_Shell_Abnormalities/Experiment1_MeanSE_Abnormalities.pdf", width = 4, height = 12) # three figures
+ggarrange(
+  Exp1_barplot,
+  Exp1_boxplot,
+  Exp1_MeanSE,
+  nrow = 3
+)
+dev.off()
+```
+
+```{r Mean table + plots; F1 Experiment #2}
+
+
+# Summarise Percent Deformities for plotting 
+# Remember - we DO NOT need the Parent_pCO2 column here - just Larvae pCO2
+Exp2_mean_deformaties <- df_Exp2 %>% 
+                          dplyr::select(Larvae_pCO2,Percent.deformed) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Larvae_pCO2) %>% 
+                          dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                           n           = n(),
+                                           sd_Perc_def   = sd(Percent.deformed),
+                                           se_Perc_def   = sd_Perc_def/(sqrt(n)))
+# kable read the head of this for pdf knit
+Exp2_mean_deformaties %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+# Barplots
+Exp2_barplot <- ggplot(Exp2_mean_deformaties) +
+                        geom_errorbar(aes(x=Larvae_pCO2, 
+                                           ymin=mean_Perc_def-se_Perc_def, 
+                                           ymax=mean_Perc_def+se_Perc_def), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #1 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp2_barplot)
+
+
+# Boxplot
+Exp2_boxplot <- ggplot(df_Exp2,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                        geom_boxplot() +
+                        geom_jitter(width = 0.25) +
+                        labs(title="Experiment #2 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                           values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp2_boxplot)
+
+
+# Mean SE
+Exp2_MeanSE <- ggplot(df_Exp2,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","orange", "purple")) + 
+                        labs(title="Experiment #2 (F1)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                           values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(),
+                              axis.title.y=element_blank(),
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+
+print(Exp2_MeanSE)
+
+
+# output yo stuff homie!
+write.csv(Exp2_mean_deformaties,"Output/2_Dstage_Shell_Abnormalities/Experiment2_Mean_Abnormalities.csv")
+
+pdf("Output/2_Dstage_Shell_Abnormalities/Experiment2_MeanSE_Abnormalities.pdf", width = 4, height = 12) # three figures
+ggarrange(
+  Exp2_barplot,
+  Exp2_boxplot,
+  Exp2_MeanSE,
+  nrow = 3
+)
+dev.off()
+```
+
+```{r Mean table + plots; F2 Experiment #4}
+
+
+# Summarise Percent Deformities for plotting 
+# Remember - we DO NOT need the Parent_pCO2 column here - just Larvae pCO2
+Exp4_mean_deformaties <- df_Exp4 %>% 
+                          dplyr::select(Larvae_pCO2,Percent.deformed) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Larvae_pCO2) %>% 
+                          dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                           n           = n(),
+                                           sd_Perc_def   = sd(Percent.deformed),
+                                           se_Perc_def   = sd_Perc_def/(sqrt(n)))
+# kable read the head of this for pdf knit
+Exp4_mean_deformaties %>%  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+
+# Barplots
+Exp4_barplot <- ggplot(Exp4_mean_deformaties) +
+                        geom_errorbar(aes(x=Larvae_pCO2, 
+                                           ymin=mean_Perc_def-se_Perc_def, 
+                                           ymax=mean_Perc_def+se_Perc_def), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #4 (F2)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                             values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp4_barplot)
+
+# Boxplot
+Exp4_boxplot <- ggplot(df_Exp4,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                        geom_boxplot() +
+                        geom_jitter(width = 0.25) +
+                        labs(title="Experiment #2 (F2)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                         scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none") 
+print(Exp4_boxplot)
+
+
+# Mean SE
+Exp4_MeanSE <- ggplot(df_Exp4,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                       geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                       stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","orange")) + 
+                        labs(title="Experiment #4 (F2)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Proportion deformed") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(Exp4_MeanSE)
+
+# output yo stuff homie!
+write.csv(Exp4_mean_deformaties,"Output/2_Dstage_Shell_Abnormalities/Experiment4_Mean_Abnormalities.csv")
+
+pdf("Output/2_Dstage_Shell_Abnormalities/Experiment4_MeanSE_Abnormalities.pdf", width = 4, height = 12) # three figures
+ggarrange(
+  Exp4_barplot,
+  Exp4_boxplot,
+  Exp4_MeanSE,
+  nrow = 3
+)
+dev.off()
+```
+
+## Manuscript 3; Expeirment 3
+
+**output folder** = '3_F2_Full_factorial'
+
+```{r Mean table + plots; F2 Experiment #3}
+
+# Summarise Percent Deformities for plotting 
+Exp3_mean_deformaties <- df_Exp3 %>% 
+                          dplyr::select(Parent_pCO2,Larvae_pCO2,Percent.deformed) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Parent_pCO2,Larvae_pCO2) %>% 
+                          dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                           n           = n(),
+                                           sd_Perc_def   = sd(Percent.deformed),
+                                           se_Perc_def   = sd_Perc_def/(sqrt(n)))
+
+# Barplots
+Exp3_barplot <- ggplot(Exp3_mean_deformaties) +
+                        geom_errorbar(aes(x=Larvae_pCO2, 
+                                           ymin=mean_Perc_def-se_Perc_def, 
+                                           ymax=mean_Perc_def+se_Perc_def), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #3 (F2)", 
+                            x ="pCO2 Offspring Exposur", 
+                            y = "Percent Abnormalities") +
+                        scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              legend.position="none") +
+                        facet_wrap(~Parent_pCO2)
+
+print(Exp3_barplot)
+
+
+# Boxplot
+Exp3_boxplot <- ggplot(df_Exp3,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                        geom_boxplot() +
+                        geom_jitter(width = 0.25) +
+                        labs(title="Experiment #3 (F2)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none")   +
+                        facet_wrap(~Parent_pCO2)
+print(Exp3_boxplot)
+
+# Mean SE
+Exp3_MeanSE <- ggplot(df_Exp3,aes(x=Larvae_pCO2, 
+                                 y=Percent.deformed, 
+                                 colour=Larvae_pCO2)) +
+                             # scale_linetype(c("dotted","solid")) +
+                        scale_colour_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                        stat_summary(fun.y="mean", size = 0.8, color = "black",
+                                          position = position_dodge2(width = 1)) +
+                        stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 1)) +
+                        labs(title="Experiment #3 (F2)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.title.y=element_blank(),
+                              # axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none")  +
+                        facet_wrap(~Parent_pCO2)
+print(Exp3_MeanSE)
+
+
+# output yo stuff homie!
+write.csv(Exp3_mean_deformaties,"Output/3_F2_Full_factorial/Experiment3_Mean_Abnormalities.csv")
+
+pdf("Output/3_F2_Full_factorial/Experiment3_MeanSE_Abnormalities.pdf", width = 5, height = 12) # three figures
+ggarrange(
+  Exp3_barplot,
+  Exp3_boxplot,
+  Exp3_MeanSE,
+  nrow = 3
+)
+dev.off()
+
+```
+
+## Manuscript 4; Expeirment 6
+
+**output folder** = '4_F3_Full_factorial'
+
+```{r Mean table + plots; F3 Experiment #6}
+
+# Summarise Percent Deformities for plotting 
+Exp6_mean_deformaties <- df_Exp6 %>% 
+                          dplyr::select(Parent_pCO2,Larvae_pCO2,Percent.deformed) %>% 
+                          na.omit() %>% 
+                          dplyr::group_by(Parent_pCO2,Larvae_pCO2) %>% 
+                          dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                           n           = n(),
+                                           sd_Perc_def   = sd(Percent.deformed),
+                                           se_Perc_def   = sd_Perc_def/(sqrt(n)))
+
+# Barplots
+Exp6_barplot <- ggplot(Exp6_mean_deformaties) +
+                        geom_errorbar(aes(x=Larvae_pCO2, 
+                                           ymin=mean_Perc_def-se_Perc_def, 
+                                           ymax=mean_Perc_def+se_Perc_def), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=Larvae_pCO2, y=mean_Perc_def,fill=factor(Larvae_pCO2)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #6 (F3)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              legend.position="none") +
+                        facet_wrap(~Parent_pCO2)
+
+print(Exp6_barplot)
+
+
+# Boxplot
+Exp6_boxplot <- ggplot(df_Exp6,
+                       aes(x=Larvae_pCO2, 
+                                         y=Percent.deformed,
+                                         fill=factor(Larvae_pCO2)), 
+                                  stat="identity") +
+                        geom_boxplot() +
+                        geom_jitter(width = 0.25) +
+                        labs(title="Experiment #6 (F3)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=10),
+                              legend.position="none")   +
+                        facet_wrap(~Parent_pCO2)
+print(Exp6_boxplot)
+
+# Mean SE
+Exp6_MeanSE <- ggplot(df_Exp6,aes(x=Larvae_pCO2, 
+                                 y=Percent.deformed, 
+                                 colour=Larvae_pCO2)) +
+                             # scale_linetype(c("dotted","solid")) +
+                        scale_colour_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        geom_point(aes(colour = Larvae_pCO2), 
+                                        position = position_dodge2(width = 0.2)) + 
+                        stat_summary(fun.y="mean", size = 0.8, color = "black",
+                                          position = position_dodge2(width = 1)) +
+                        stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.25, size = 1,
+                                          position = position_dodge2(width = 1)) +
+                        labs(title="Experiment #6 (F3)", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "Percent Abnormalities") +
+                        scale_x_discrete(labels=c("L", "M", "H")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              # axis.title.y=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none")  +
+                        facet_wrap(~Parent_pCO2)
+print(Exp6_MeanSE)
+
+
+# output yo stuff homie!
+write.csv(Exp3_mean_deformaties,"Output/4_F3_Full_factorial/Experiment6_Mean_Abnormalities.csv")
+
+pdf("Output/4_F3_Full_factorial/Experiment6_MeanSE_Abnormalities.pdf", width = 5, height = 12) # three figures
+ggarrange(
+  Exp6_barplot,
+  Exp6_boxplot,
+  Exp6_MeanSE,
+  nrow = 3
+)
+dev.off()
+```
+
+```{r Plots ggarrange them all}
+
+# grid arrange plots for ouput 
+
+library(ggplot2)
+library(gridExtra)
+library(grid)
+
+Exp1_MeanSE
+Exp2_MeanSE
+Exp3_MeanSE
+Exp4_MeanSE
+Exp6_MeanSE
+
+pdf("Output/DStage_abnormalities/Percent_Abnormalities.pdf", width=8, height=6)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(2, 4))) # 3 rows, 5 columns
+grid.text("Percent Abnormalities", vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+print(Exp1_MeanSE, vp = vplayout(1, 1))  
+print(Exp2_MeanSE, vp = vplayout(1, 2))  
+print(Exp3_MeanSE, vp = vplayout(1, 3:4))   
+print(Exp4_MeanSE, vp = vplayout(2, 2))
+print(Exp6_MeanSE, vp = vplayout(2, 3:4))
+dev.off()
+
+```
+
+
+# Statistics 
+
+
+## Manuscript 2; Expeirments 1,2 and 4
+
+**output folder** = '2_Dstage_Shell_Abnormalities'
+
+**about**: one way analysis only larval treatment
+
+* Experiment 1 - may not use these F1 data, short trial larvae died therafter..
+```{r  Anova Kruskal Wallis; F1 Experiment #1} 
+
+# One -way ANOVA 
+# NOTE: balanced design here, HOWEVER this trial may not be included in the MS (larvae died thereafter due to bacteria!)
+# All CO2 treatments low moderate and high
+# one way anova 
+aovMOD_Exp1 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
+shapiro.test(resid(aovMOD_Exp1)) # 0.4186 - norm
+leveneTest(aovMOD_Exp1) # 0.4478- pass
+summary(aov(aovMOD_Exp1))
+
+#             Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2  2 1.5851  0.7925   127.7 2.48e-07 ***
+# Residuals    9 0.0559  0.0062
+
+# posthoc analysis of the one way anova
+aovMOD_Exp1_means_contr <- emmeans::emmeans(object = aovMOD_Exp1, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp1_mod_means   <- multcomp::cld(object = aovMOD_Exp1_means_contr$emmeans, 
+                                         Letters = letters) # letter display\
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+#  Low pCO2      0.0387 0.0394  9 -0.05036    0.128  a    
+#  Moderate pCO2 0.0805 0.0394  9 -0.00861    0.170  a    
+#  High pCO2     0.8297 0.0394  9  0.74064    0.919   b 
+
+
+```
+
+```{r  Beta Regression; F1 Experiment #1} 
+# run beta regression
+library(betareg)
+
+Exp1_Dstage_logit <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this - THIS IS THE DEFAULT
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp1)
+
+Exp1_Dstage_logit2 <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2 | Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this - THIS IS THE DEFAULT
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp1)
+
+lrtest(Exp1_Dstage_logit,Exp1_Dstage_logit2)
+summary(Exp1_Dstage_logit2)
+# Coefficients (mu model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               -2.8014     0.5188  -5.399 6.69e-08 ***
+# Larvae_pCO2Moderate pCO2   0.5248     0.5537   0.948    0.343    
+# Larvae_pCO2High pCO2       4.3397     0.6261   6.931 4.17e-12 ***
+
+
+# chi squared tests 
+df_Exp1.MODvHIGH <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Low pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.MODvHIGH) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Low pCO2'))$Larvae_pCO2
+ct_a <- chisq.test(df_Exp1.MODvHIGH)
+ct_a <- tidy(ct_a)
+ct_a$comparison <- "moderate v high"
+
+df_Exp1.LOWvHIGH <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Moderate pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.LOWvHIGH) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'Moderate pCO2'))$Larvae_pCO2
+ct_b <- chisq.test(df_Exp1.LOWvHIGH)
+ct_b <- tidy(ct_b)
+ct_b$comparison <- "low v high"
+
+df_Exp1.LOWvMOD <- 
+  as.matrix(
+  (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'High pCO2'))$Percent.deformed, 
+   row.names=NULL)
+row.names(df_Exp1.LOWvMOD) <- (df_Exp1 %>% filter(!Larvae_pCO2 %in% 'High pCO2'))$Larvae_pCO2
+ct_c <- chisq.test(df_Exp1.LOWvMOD)
+ct_c <- tidy(ct_c)
+ct_c$comparison <- "low v moderate"
+
+ct <- rbind(ct_a, ct_b, ct_c)
+ct$adj.p.value <- p.adjust(ct$p.value)
+
+# run proprtion z tests 
+Exp1_Low.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'Low pCO2'))$Percent.deformed
+Exp1_Mod.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'Moderate pCO2'))$Percent.deformed
+Exp1_High.data <- (df_Exp1 %>% filter(Larvae_pCO2 %in% 'High pCO2'))$Percent.deformed
+
+res.LOWvMOD <- prop.test(x = Exp1_Low.data, n = Exp1_Mod.data,
+                         p = NULL, alternative = "two.sided", correct = TRUE)
+
+res.LOWvHIGH <- prop.test(x = Exp1_Low.data, n = Exp1_High.data,
+                         p = NULL, alternative = "two.sided", correct = TRUE)
+# data:  Exp1_Low.data out of Exp1_High.data
+# X-squared = 0.078509, df = 3, p-value = 0.9943
+
+# run t tests
+t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp1)
+df_Exp1 %>%
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+
+
+```
+
+```{r  output stats; F1 Experiment #1} 
+#output
+
+## beta
+capture.output(
+  print(summary(F1_Dstage_BetaReg, type = "quantile")),
+  file="Output/2_Dstage_Shell_Abnormalities/Experiment1_BetaRegression.doc") 
+
+## anova
+capture.output(summary(aov(aovMOD_Exp1)),file="Output/2_Dstage_Shell_Abnormalities/Experiment1_ANOVA.doc") 
+
+## posthoc anova
+capture.output(aovMOD_Exp1_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment1_TukeyHSD.doc") 
+
+```
+
+* Experiment 2 - defintiely using these F1 data, larvea reared to metamorphosis
+
+  * note that this us unblaanced, 4, 4, 5 for treatmeents due to missingness - Kruskall Wallis non parametric
+```{r  Anova Kruskal Wallis; F1 Experiment #2} 
+
+# RUN ANOVA
+# All CO2 treatments low moderate and high
+aovMOD_Exp2 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
+shapiro.test(resid(aovMOD_Exp2)) # 0.2499 - norm
+leveneTest(aovMOD_Exp2) # 0.4246- pass
+summary(aov(aovMOD_Exp2))
+
+#             Df Sum Sq Mean Sq F value  Pr(>F)    
+# Larvae_pCO2  2 2.0340  1.0170   665.6 2.3e-11 ***
+# Residuals   10 0.0153  0.0015
+
+aovMOD_Exp2_means_contr <- emmeans::emmeans(object = aovMOD_Exp2, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp2_mod_means   <- multcomp::cld(object = aovMOD_Exp2_means_contr$emmeans, Letters = letters) # letter display\
+
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+# Moderate pCO2 0.0405 0.0195 10 -0.00305    0.084  a    
+# Low pCO2      0.0620 0.0175 10  0.02305    0.101  a    
+# High pCO2     0.9093 0.0195 10  0.86570    0.953   b
+ 
+
+
+# RUN KW
+kruskal.test(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
+# data:  Percent.deformed by Larvae_pCO2
+# Kruskal-Wallis chi-squared = 8.2116, df = 2, p-value = 0.01648
+?dunnTest
+dunnTest(x = df_Exp2$Percent.deformed, 
+         g = df_Exp2$Larvae_pCO2, 
+         method = dunn.test::p.adjustment.methods[c(4, 2:3, 5:8, 1)],
+         two.sided = TRUE)
+?dunnTest
+# High pCO2 - Low pCO2	2.1848464	0.028900112	0.05780022	 Marginal
+# High pCO2 - Moderate pCO2	2.7272727	0.006386023	0.01915807	Significnat
+# Low pCO2 - Moderate pCO2	0.6899515	0.490224694	0.49022469	
+library(dunn.test)
+
+dunn.test(df_Exp2$Percent.deformed, g=df_Exp2$Larvae_pCO2,
+          method=p.adjustment.methods[c(1)], 
+          kw=TRUE, label=TRUE, 
+      wrap=FALSE, table=TRUE, 
+      list=TRUE, rmc=FALSE, 
+      alpha=0.05, altp=FALSE)
+
+# List of pairwise comparisons: Z statistic (p-value)
+# -----------------------------------------------
+# High pCO2 - Low pCO2      :  2.184846 (0.0145)*
+# High pCO2 - Moderate pCO2 :  2.727272 (0.0032)*
+# Low pCO2 - Moderate pCO2  :  0.689951 (0.2451)
+
+```
+
+
+```{r  Beta regression; F1 Experiment #2} }
+# run beta regression
+library(betareg)
+# link(linkname) specifies the link function used for the conditional mean.
+# The Complimentary Log-Log (cloglog) link is another example of using an inverse cumulative distribution function to transform the target. It differs from logit and probit function because it is asymmetric. It works best when the chance of an event is extremely low or extremely high
+# good link below: 
+# https://knowledge.alteryx.com/index/s/article/Selecting-a-Logistic-Regression-Model-Type-Logit-Probit-or-Cloglog-1583460917464
+
+
+# IMPORTNAT - here we have to transform the data becase y assumes either 0 or 1, i our case 
+# we have two cases of a 0, we canuse the queation: 
+# stated  on page 3 in btareg https://cran.r-project.org/web/packages/betareg/vignettes/betareg.pdf
+# citing the authors (Smithson and Verkuilen 2006).
+
+df_Exp2_OM <- df_Exp2 %>% 
+                          dplyr::select(Percent.deformed, Larvae_pCO2)  %>%  
+                          na.omit() %>% 
+                          dplyr::mutate(Percent.deformed = # 3 is the number of samples in this data
+                              (Percent.deformed * (13 - 1) + 0.5) / 13 # Smithson and Verkuilen 2006
+                          )
+
+Exp2_Dstage_logit <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                               # link = "loglog",
+                               # link = "probit",
+                               # link = "cloglog",
+                               # link = "logit", # THIS IS THE DEFAULT
+                             data=df_Exp2_OM
+                             )
+Exp2_Dstage_logit
+
+
+
+Exp2_Dstage_logit2 <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2 | Larvae_pCO2,
+                               # link = "loglog",
+                               # link = "probit",
+                               # link = "cloglog",
+                               # link = "logit", # THIS IS THE DEFAULT
+                             data=df_Exp2_OM
+                             )
+lrtest(Exp2_Dstage_logit, Exp2_Dstage_logit2)
+  
+
+summary(Exp2_Dstage_logit)
+# Default model using the Smithson and Verkuilen 2006 transformation for 0s
+# Coefficients (mean model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               -2.2081     0.1606 -13.746   <2e-16 ***
+# Larvae_pCO2Moderate pCO2  -0.3768     0.2603  -1.448    0.148    
+# Larvae_pCO2High pCO2       4.1679     0.2306  18.070   <2e-16 ***
+  
+
+
+
+
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, data=df_Exp2)
+# 1	Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	5.17e-01	5.17e-01	
+# 2	Percent.deformed	Low pCO2	High pCO2	5	4	-42.3081073	4.654956	3.36e-07	1.01e-06	
+# 3	Percent.deformed	Moderate pCO2	High pCO2	4	4	-25.8879404	5.009721	1.57e-06	3.14e-06
+df_Exp2 %>%
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	5.17e-01	1.000e+00	
+# Percent.deformed	Low pCO2	High pCO2	5	4	-42.3081073	4.654956	3.36e-07	1.008e-06	
+# Percent.deformed	Moderate pCO2	High pCO2	4	4	-25.8879404	5.009721	1.57e-06	4.710e-06
+
+
+
+
+# outputs
+
+## anova
+capture.output(summary(aov(aovMOD_Exp2)),file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA.doc") 
+
+## posthoc for anova 
+capture.output(aovMOD_Exp2_mod_means,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_TukeyHSD.doc") 
+
+## betareg
+capture.output(summary(Exp2_Dstage_BetaReg, 
+                       type = "pearson"),file="Output/2_Dstage_Shell_Abnormalities/Experiment2_BetaRegression.doc") 
+
+
+# Just moderate and high to comapre to the F2 experiment (Exp 4)
+aovMOD_Exp2_LowvMod <- lm(Percent.deformed ~ Larvae_pCO2, 
+                          data= (df_Exp2 %>% 
+                                   dplyr::select(Percent.deformed, Larvae_pCO2) %>% 
+                                   dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+                                   na.omit()))
+shapiro.test(resid(aovMOD_Exp2_LowvMod)) # 0.2539 - norm
+leveneTest(aovMOD_Exp2_LowvMod) # 0.237- pass
+summary(aov(aovMOD_Exp2_LowvMod))
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Larvae_pCO2  1 0.001027 0.001027   0.624  0.456
+# Residuals    7 0.011527 0.001647
+
+# t test
+t_test(Percent.deformed ~ Larvae_pCO2, 
+                                 data= (df_Exp2 %>% dplyr::filter(!Larvae_pCO2 %in% 'High pCO2')))
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	0.517
+df_Exp2 %>%
+  dplyr::filter(!Larvae_pCO2 %in% 'High pCO2') %>% 
+  t_test(data =., Percent.deformed ~ Larvae_pCO2) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+# Percent.deformed	Low pCO2	Moderate pCO2	5	4	0.7159842	3.654381	0.517	0.517
+
+capture.output(aovMOD_Exp2_LowvMod,file="Output/2_Dstage_Shell_Abnormalities/Experiment2_ANOVA_LowvMOD.doc") 
+
+```
+
+
+* Expeirment 4 F2 data, T test is most appropriate here
+
+```{r  Statistics; F2 Experiment #4} 
+
+# ANOVA first
+aovMOD_Exp4 <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Exp4)
+shapiro.test(resid(aovMOD_Exp4)) # 0.2875 - norm
+leveneTest(aovMOD_Exp4) # 0.5552- pass
+summary(aov(aovMOD_Exp4))
+
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Larvae_pCO2  1 0.000337 0.000337   0.085  0.785
+# Residuals    4 0.015838 0.003960
+
+
+# run beta regression
+library(betareg)
+Exp4_Dstage_BetaReg <- betareg(Percent.deformed ~ 
+                               Larvae_pCO2,
+                             # link = "logit", # same exact outomce without this
+                             # link.phi = "identity", # same exact outcome without this
+                             data=df_Exp4
+                             )
+summary(Exp4_Dstage_BetaReg, type = "pearson")  # same exact outomce without this
+summary(Exp4_Dstage_BetaReg, type = "quantile")  # same exact outomce without this
+# Coefficients (mean model with logit link):
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)              -2.23013    0.30643  -7.278 3.39e-13 ***
+# Larvae_pCO2Moderate pCO2  0.03702    0.41964   0.088     0.93  
+
+
+# T-test 
+
+# normality Shapiro Wilk
+(df_Exp4 %>% 
+        group_by(as.factor(Larvae_pCO2)) %>% 
+        rstatix::shapiro_test(Percent.deformed))
+# Low pCO2	Percent.deformed	0.7714106		# low pCO2 non normal!
+# Moderate pCO2	Percent.deformed	0.9003712	0.38668421		            
+
+# equal variance 
+(df_Exp4 %>% 
+    rstatix::levene_test(Percent.deformed ~ as.factor(Larvae_pCO2)))$p[1] # 0.5552307 pass variance
+
+# we gotta run the Wilkcox! non normal under low pCO2!  
+wilcox.test(df_Exp4$Percent.deformed ~ (as.factor(df_Exp4$Larvae_pCO2)))
+# Wilcoxon rank sum exact test
+# data:  df_Exp4$Percent.deformed by as.factor(df_Exp4$Larvae_pCO2)
+# W = 4, p-value = 1
+?wilcox.test
+# output 
+
+## anova - no effect
+capture.output(summary(aov(aovMOD_Exp4)),file="Output/2_Dstage_Shell_Abnormalities/Experiment4_ANOVA.doc") 
+
+```
+
+
+## Manuscript 3; Expeirment 3
+
+**output folder** = '3_F2_Full_factorial'
+
+**about**: two way analysis only larval treatment
+
+```{r  Statistics; F2 Experiment #3} 
+
+aovMOD_Exp3 <- lm(Percent.deformed ~ Larvae_pCO2 * Parent_pCO2, data=df_Exp3)
+shapiro.test(resid(aovMOD_Exp3)) # 0.07377 - norm
+leveneTest(aovMOD_Exp3) # 0.3222- pass
+summary(aov(aovMOD_Exp3))
+
+#                         Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2              2  3.546  1.7730 212.856 2.98e-13 ***
+# Parent_pCO2              2  0.036  0.0180   2.157    0.145    
+# Larvae_pCO2:Parent_pCO2  4  0.010  0.0025   0.304    0.872    
+# Residuals               18  0.150  0.0083
+
+capture.output(summary(aov(aovMOD_Exp3)),file="Output/3_F2_Full_factorial/Experiment3_ANOVA.doc") 
+
+
+aovMOD_Exp3_means_contr <- emmeans::emmeans(object = aovMOD_Exp3, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp3_mod_means   <- multcomp::cld(object = aovMOD_Exp3_means_contr$emmeans, Letters = letters) # letter display\
+
+ # Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+ # Low pCO2       0.163 0.0304 18   0.0993    0.227  a    
+ # Moderate pCO2  0.193 0.0304 18   0.1293    0.257  a    
+ # High pCO2      0.947 0.0304 18   0.8826    1.010   b  
+
+capture.output(aovMOD_Exp3_mod_means,file="Output/3_F2_Full_factorial/Experiment3_TukeyHSD.doc") 
+
+```
+
+
+## Manuscript 4; Expeirment 6
+
+**output folder** = '4_F3_Full_factorial'
+
+**about**: two way analysis only larval treatment
+
+```{r  Statistics; F2 Experiment #3} 
+
+aovMOD_Exp6 <- lm(Percent.deformed ~ Larvae_pCO2 * Parent_pCO2, data=df_Exp6)
+shapiro.test(resid(aovMOD_Exp6)) # 0.8472 - norm
+leveneTest(aovMOD_Exp6) # 0.4374- pass
+summary(aov(aovMOD_Exp6))
+
+#                         Df  Sum Sq Mean Sq F value  Pr(>F)   
+# Larvae_pCO2              2 0.17830 0.08915   6.388 0.00853 **
+# Parent_pCO2              2 0.01225 0.00612   0.439 0.65193   
+# Larvae_pCO2:Parent_pCO2  4 0.12531 0.03133   2.245 0.10708   
+# Residuals               17 0.23724 0.01396
+
+capture.output(summary(aov(aovMOD_Exp6)),file="Output/4_F3_Full_factorial/Experiment6_ANOVA.doc") 
+
+
+aovMOD_Exp6_means_contr <- emmeans::emmeans(object = aovMOD_Exp6, # run tukey
+                                    pairwise ~ "Larvae_pCO2",
+                                    adjust = "tukey")
+aovMOD_Exp6_mod_means   <- multcomp::cld(object = aovMOD_Exp6_means_contr$emmeans, Letters = letters) # letter display\
+
+ # Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+ # Low pCO2       0.312 0.0394 17    0.229    0.395  a    
+ # Moderate pCO2  0.445 0.0394 17    0.362    0.528  ab   
+ # High pCO2      0.522 0.0425 17    0.432    0.612   b
+
+capture.output(aovMOD_Exp6_mod_means,file="Output/4_F3_Full_factorial/Experiment6_TukeyHSD.doc") 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Generation 2
+### * Full model: Percent.deformed ~ Parent_pCO2 * Larvae_pCO2
+```{r  Statistics; df_Gen2} 
+library(emmeans)
+aovMOD_Gen2 <- lm(Percent.deformed ~ Parent_pCO2 * Larvae_pCO2, data=df_Gen2)
+shapiro.test(resid(aovMOD_Gen2)) # 0.07377 - norm
+leveneTest(aovMOD_Gen2) # 0.3222- pass
+summary(aov(aovMOD_Gen2))
+#                         Df Sum Sq Mean Sq F value   Pr(>F)    
+# Parent_pCO2              2  0.036  0.0180   2.157    0.145    
+# Larvae_pCO2              2  3.546  1.7730 212.856 2.98e-13 ***
+# Parent_pCO2:Larvae_pCO2  4  0.010  0.0025   0.304    0.872    
+# Residuals               18  0.150  0.0083
+aovMOD_Gen2_posthoc <- emmeans(aovMOD_Gen2, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Gen2_posthoc$emmeans,alpha = 0.5, Letters = letters)
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+# Low pCO2       0.163 0.0304 18   0.0993    0.227  a    
+# Moderate pCO2  0.193 0.0304 18   0.1293    0.257  a    
+# High pCO2      0.947 0.0304 18   0.8826    1.010   b
+
+(0.947- 0.163) * 100 # 78.4 % more mortality under high than low pCO2, regardless of parental history
+(0.947- 0.193) * 100 # 75.4 % more mortality under high than moderate pCO2, regardless of parental history
+```
+
+### * Partial models (within history): Percent.deformed ~  Larvae_pCO2 (run for each history)
+### * why do this? - we see that high exposure had an overarching effect on percent deformities when looking at all data, was a particular history affected by this encounter significantly as to others? Technically this should come out via an interaction but still of merit to explore here
+```{r Gen 2 within history} 
+
+# dataframes filterered for history 
+df_Gen2_LOWhist  <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "Low pCO2")
+df_Gen2_MODhist  <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "Moderate pCO2")
+df_Gen2_HIGHhist <- df_Gen2 %>%  dplyr::filter(Parent_pCO2 == "High pCO2")
+
+# Run mods 
+aovMOD_Gen2_LOW  <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen2_LOWhist)
+aovMOD_Gen2_MOD  <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen2_MODhist)
+aovMOD_Gen2_HIGH <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen2_HIGHhist)
+
+# check assumptions
+shapiro.test(resid(aovMOD_Gen2_LOW)) # 0.5787 - norm
+leveneTest(aovMOD_Gen2_LOW)  # 0.9353 - pass
+
+shapiro.test(resid(aovMOD_Gen2_MOD)) # 0.5217 - norm
+leveneTest(aovMOD_Gen2_MOD) # 0.4866 - pass
+
+shapiro.test(resid(aovMOD_Gen2_HIGH)) # 0.01795 - non norm - run non parametric Kruskal Wallis
+leveneTest(aovMOD_Gen2_HIGH) # 0.1122 - pass
+
+# non parametrics (if needed)
+aovKW_Gen2_HIGH <- kruskal.test(Percent.deformed ~ Larvae_pCO2, data=df_Gen2_HIGHhist)
+
+# Summary models 
+summary(aov(aovMOD_Gen2_LOW)) 
+#             Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2  2 1.3093  0.6547   282.2 1.16e-06 ***
+# Residuals    6 0.0139  0.0023
+
+summary(aov(aovMOD_Gen2_MOD))
+#             Df Sum Sq Mean Sq F value   Pr(>F)    
+# Larvae_pCO2  2 1.0260  0.5130    44.9 0.000246 ***
+# Residuals    6 0.0686  0.0114
+
+aovKW_Gen2_HIGH
+# Kruskal-Wallis chi-squared = 5.6, df = 2, p-value = 0.06081
+
+# Conclusion 
+# Low and Moderate history show a significant affect of larvae pCO2 on percent deformities
+# High history are unaffected by larvae pCO2
+
+```
+
+
+## Generation 3
+### * Full model: Percent.deformed ~ Parent_pCO2 * Larvae_pCO2
+```{r Gen 3 Full model} 
+library(emmeans)
+aovMOD_Gen3 <- lm(Percent.deformed ~ Parent_pCO2 * Larvae_pCO2, data=df_Gen3)
+shapiro.test(resid(aovMOD_Gen3)) # 0.8472 - norm
+leveneTest(aovMOD_Gen3) # 0.4374- pass
+summary(aov(aovMOD_Gen3))
+#                         Df  Sum Sq Mean Sq F value  Pr(>F)   
+# Parent_pCO2              2 0.01863 0.00931   0.667 0.52602   
+# Larvae_pCO2              2 0.17192 0.08596   6.160 0.00973 **
+# Parent_pCO2:Larvae_pCO2  4 0.12531 0.03133   2.245 0.10708   
+# Residuals               17 0.23724 0.01396
+aovMOD_Gen3_posthoc <- emmeans(aovMOD_Gen3, pairwise~Larvae_pCO2, adjust="tukey")
+multcomp::cld(aovMOD_Gen3_posthoc$emmeans,alpha = 0.5, Letters = letters)
+# Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+# Low pCO2       0.312 0.0394 17    0.229    0.395  a    
+# Moderate pCO2  0.445 0.0394 17    0.362    0.528   b   
+# High pCO2      0.522 0.0425 17    0.432    0.612    c
+
+(0.445- 0.312) * 100 # 13.3 % more mortality under moderate than low pCO2, regardless of parental history
+(0.522- 0.312) * 100 # 21 % more mortality under high than low pCO2, regardless of parental history
+(0.522- 0.445) * 100 # 7.7 % more mortality under high than moderate pCO2, regardless of parental history
+```
+
+### * Partial models (within history): Percent.deformed ~  Larvae_pCO2 (run for each history)
+### * why do this? - we see that high exposure had an overarching effect on percent deformities when looking at all data, was a particular history affected by this encounter significantly as to others? Technically this should come out via an interaction but still of merit to explore here
+```{r Gen 3 within history} 
+
+# dataframes filterered for history 
+df_Gen3_LOWhist  <- df_Gen3 %>%  dplyr::filter(Parent_pCO2 == "Low pCO2")
+df_Gen3_MODhist  <- df_Gen3 %>%  dplyr::filter(Parent_pCO2 == "Moderate pCO2")
+df_Gen3_HIGHhist <- df_Gen3 %>%  dplyr::filter(Parent_pCO2 == "High pCO2")
+
+# Run mods 
+aovMOD_Gen3_LOW  <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen3_LOWhist)
+aovMOD_Gen3_MOD  <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen3_MODhist)
+aovMOD_Gen3_HIGH <- lm(Percent.deformed ~ Larvae_pCO2, data=df_Gen3_HIGHhist)
+
+# check assumptions
+shapiro.test(resid(aovMOD_Gen3_LOW)) # 0.9852 - norm
+leveneTest(aovMOD_Gen3_LOW)  # 0.07482  - pass
+
+shapiro.test(resid(aovMOD_Gen3_MOD)) # 0.6621 - norm
+leveneTest(aovMOD_Gen3_MOD) # 0.7494 - pass
+
+shapiro.test(resid(aovMOD_Gen3_HIGH)) # 0.7328 - norm
+leveneTest(aovMOD_Gen3_HIGH) # 0.8681 - pass
+
+# Summary models 
+summary(aov(aovMOD_Gen3_LOW))
+#             Df  Sum Sq Mean Sq F value Pr(>F)  
+# Larvae_pCO2  2 0.18733 0.09366   5.115 0.0618 .
+# Residuals    5 0.09156 0.01831
+
+summary(aov(aovMOD_Gen3_MOD))
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# Larvae_pCO2  2 0.1096 0.05481   2.769  0.141
+# Residuals    6 0.1187 0.01979
+
+summary(aov(aovMOD_Gen3_HIGH))
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Larvae_pCO2  2 0.000285 0.000142   0.032  0.969
+# Residuals    6 0.026931 0.004489
+
+# Conclusion 
+# Low showed a marginal effects of pCO2 on percent deformities
+# Moderate and High history are unaffected by larvae pCO2
+```
+
+
+
+```{r}
+df$Percent.deformed_trans <- asin(sqrt(df$Percent.deformed))
+
+leveneTest(Percent.deformed_trans ~ Larvae_pCO2, data=df)
+shapiro.test(df$Percent.deformed_trans)
+```
+
+
+
+# Stats across genrations
+Data did not meet the assumptions of normality so the non parametric Scheirer Ray Hare test was used to test for signifcance among treatments and prental exposures.
+```{r}
+scheirerRayHare(Percent.deformed ~ Treatment*Run,
+                data = df)
+
+scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+                data = df)
+
+scheirerRayHare(Percent.deformed ~ Run*Parent,
+                data = df)
+
+dunnTest(Percent.deformed ~ Run,
+                data = df,
+              method="bh")
+```
+
+
+### Low parental exposure across generations (all larval treatmeents)
+```{r}
+df_low <- df%>%
+  filter(Parent %in% c("LOW"))
+
+leveneTest(Percent.deformed_trans ~ Run, data=df_low)
+shapiro.test(df_low$Percent.deformed_trans)
+
+scheirerRayHare(Percent.deformed ~ Treatment*Run,
+                data = df_low)
+
+
+dunnTest(Percent.deformed ~ Run,
+                data = df_low,
+              method="bh")
+```
+
+### Low larval exposure and Low parental exposure ("control") across generations
+```{r}
+
+df_low_low <- df_low%>%
+  filter(Treatment %in% c("Low OA"))
+
+leveneTest(Percent.deformed_trans ~ Run, data=df_low_low)
+shapiro.test(df_low_low$Percent.deformed_trans)
+
+mod <- aov(Percent.deformed_trans ~Run, data = df_low_low)
+summary(mod)
+
+TukeyHSD(mod)
+```
+
+
+################## 
+
+# Broken down for each experiment 
+
+### F1: Two runs
+
+```{r}
+
+df_2021 <- df%>%
+  filter(Year=="2021")
+
+ggplot(data=df_2021, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed (2021: F1 Larvae) ", x ="Treatment", y = "Percent Deformed")+
+  facet_wrap("Run")
+```
+
+
+```{r}
+df_run1 <- df%>%
+  filter(Run=="1")
+
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_run1)
+shapiro.test(df_run1$Percent.deformed_trans)
+
+df_run2 <- df%>%
+  filter(Run=="2")
+
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_run2)
+shapiro.test(df_run2$Percent.deformed_trans)
+```
+
+
+```{r}
+dunnTest(Percent.deformed ~ Treatment,
+                data = df_run1,
+              method="bh")
+dunnTest(Percent.deformed ~ Treatment,
+                data = df_run2,
+              method="bh")
+```
+
+
+```{r}
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_2021)
+shapiro.test(df_2021$Percent.deformed_trans)
+```
+
+### F2 April 2022
+
+```{r}
+df_2022 <- df%>%
+  filter(Year=="2022")
+
+df_2022_3 <- df_2022%>%
+  filter(Run=="3")
+
+ggplot(data=df_2022_3, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed, grouped by parentage (2022: F2 Larvae) ", x ="Treatment", y = "Percent Deformed")+
+  facet_wrap("Parent")
+```
+
+
+```{r}
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_2022_3)
+shapiro.test(df_2022_3$Percent.deformed_trans)
+```
+
+
+```{r}
+scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+                data = df_2022_3)
+
+dunnTest(Percent.deformed ~ Treatment,
+                data = df_2022_3,
+              method="bh")
+
+dunnTest(Percent.deformed ~ Parent,
+                data = df_2022_3,
+              method="bh")
+```
+
+
+### F2 August 2022
+
+```{r}
+df_2022 <- df%>%
+  filter(Year=="2022")
+
+df_2022_4 <- df_2022%>%
+  filter(Run=="4")
+
+ggplot(data=df_2022_4, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed (2022: F2 Larvae) ", x ="Treatment", y = "Percent Deformed")
+```
+
+```{r}
+
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_2022_4)
+shapiro.test(df_2022_4$Percent.deformed_trans)
+```
+
+```{r}
+
+res.kruskal <- kruskal.test(Percent.deformed ~ Treatment, data = df_2022_4)
+res.kruskal
+
+```
+
+
+### F3 Larval April 2023
+
+```{r}
+df_6 <- df %>%
+  filter(Run=="6")
+
+ggplot(data=df_6, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed, grouped by parentage (2023: F3 Larvae) ", x ="Treatment", y = "Percent Deformed")+
+  facet_wrap("Parent")
+
+
+
+Run6_mean_deformaties <- df_6 %>% 
+                dplyr::select(Treatment,Parent,Percent.deformed) %>% 
+                na.omit() %>% 
+                dplyr::group_by(Treatment,Parent) %>% 
+                dplyr::summarise(mean_Perc_def = mean(Percent.deformed), 
+                                 n           = n(),
+                                 sd_Perc_def   = sd(Percent.deformed),
+                                 se_Perc_def   = sd_Perc_def/(sqrt(n)))
+
+library(forcats)
+# relevel Parent so that the facets come in the approporate order - using forcats
+Run6_mean_deformaties$Parent <- forcats::fct_relevel(Run6_mean_deformaties$Parent, c("LOW", "MODERATE", "HIGH"))
+ggplot(Run6_mean_deformaties) +
+  geom_errorbar(aes(x=Treatment, 
+                     ymin=mean_Perc_def-se_Perc_def, 
+                     ymax=mean_Perc_def+se_Perc_def), 
+                 width=0, # removes the horizontal line
+                 colour="black", 
+                 size=1) +
+  geom_bar(aes(x=Treatment, y=mean_Perc_def,fill=factor(Treatment)), 
+            stat="identity",
+           width = 0.75,
+           alpha = 0.5) +
+  labs(title="F3 Abnormalities- Full cross exposure", 
+      x ="pCO2 Offspring Exposure", 
+      y = "Percent Abnormalities") +
+   scale_fill_manual(breaks=c("Low OA", "Moderate OA", "High OA"), 
+                       values=c("forestgreen","orange", "purple")) +
+  theme_classic() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.text=element_text(size=12),
+        legend.position="none") +
+  facet_wrap(~Parent)
+
+```
+
+
+```{r, F3 run 6 stats by history}
+
+df_6_HIGH     <- df_6 %>% dplyr::filter(Parent %in% "HIGH")
+df_6_MODERATE <- df_6 %>% dplyr::filter(Parent %in% "MODERATE")
+df_6_LOW      <- df_6 %>% dplyr::filter(Parent %in% "LOW")
+
+
+anova_HIGH <- lm(Percent.deformed_trans ~ Treatment, data = df_6_HIGH)
+shapiro.test(resid(anova_HIGH)) # 0.7455
+leveneTest(anova_HIGH) # 0.865
+summary(aov(anova_HIGH))
+#             Df   Sum Sq  Mean Sq F value Pr(>F)
+# Treatment    2 0.000305 0.000152   0.033  0.968
+# Residuals    6 0.027538 0.004590
+
+anova_MODERATE <- lm(Percent.deformed_trans ~ Treatment, data = df_6_MODERATE)
+shapiro.test(resid(anova_MODERATE)) # 0.5231
+leveneTest(anova_MODERATE) # 0.7784
+summary(aov(anova_MODERATE))
+#             Df Sum Sq Mean Sq F value Pr(>F)
+# Treatment    2 0.1244 0.06218   2.761  0.141
+# Residuals    6 0.1351 0.02252
+
+anova_LOW <- lm(Percent.deformed_trans ~ Treatment, data = df_6_LOW)
+shapiro.test(resid(anova_LOW)) # 0.9679
+leveneTest(anova_LOW) # 0.102
+summary(aov(anova_LOW))
+#             Df Sum Sq Mean Sq F value Pr(>F)  
+# Treatment    2 0.2222 0.11108   5.188 0.0603 .
+# Residuals    5 0.1071 0.02141
+
+```
+
+
+```{r}
+leveneTest(Percent.deformed_trans ~ Treatment, data=df_6)
+shapiro.test(df_6$Percent.deformed_trans)
+```
+
+```{r}
+mod <- aov(Percent.deformed_trans ~Treatment * Parent, data = df_6)
+summary(mod)
+```
+
+
+```{r}
+scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+                data = df_6)
+
+dunnTest(Percent.deformed ~ Treatment,
+                data = df_6,
+              method="bh")
+
+dunnTest(Percent.deformed ~ Parent,
+                data = df_6,
+              method="bh")
+```
+
+
+
+### Trimming the F3 to look at differences
+```{r}
+
+df_6_trim <- df_6%>%
+  filter(Parent %in% c("MODERATE", "LOW"))
+
+ggplot(data=df_6_trim, aes(x=Treatment, y=Percent.deformed, fill=Treatment)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Deformed, grouped by parentage (2023: F3 Larvae) ", x ="Treatment", y = "Percent Deformed")+
+  facet_wrap("Parent")
+```
+
+```{r}
+scheirerRayHare(Percent.deformed ~ Treatment*Parent,
+                data = df_6_trim)
+
+#dunnTest(Percent.deformed ~ Treatment,
+#                data = df_6_trim,
+ #             method="bh")
+
+#dunnTest(Percent.deformed ~ Parent,
+  #              data = df_6_trim,
+   #           method="bh")
+```
+
+
+
+
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

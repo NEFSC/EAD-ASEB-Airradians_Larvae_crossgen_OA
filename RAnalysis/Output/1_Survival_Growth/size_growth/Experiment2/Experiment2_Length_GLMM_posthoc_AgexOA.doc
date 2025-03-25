@@ -1,0 +1,20 @@
+ Larvae_pCO2   Age lsmean   SE  df asymp.LCL asymp.UCL .group
+ High pCO2     2     68.7 3.94 Inf      61.0      76.4  a    
+ High pCO2     4     75.5 4.10 Inf      67.5      83.5  ab   
+ Moderate pCO2 2     93.7 4.27 Inf      85.3     102.0   bc  
+ Low pCO2      2     96.9 3.85 Inf      89.4     104.5    c  
+ High pCO2     8     97.5 4.03 Inf      89.6     105.4    c  
+ Moderate pCO2 4    102.6 4.51 Inf      93.7     111.4    c  
+ High pCO2     10   103.1 4.24 Inf      94.8     111.4    c  
+ Low pCO2      4    107.9 4.12 Inf      99.9     116.0    c  
+ Moderate pCO2 8    157.5 5.43 Inf     146.9     168.1     d 
+ Low pCO2      8    164.2 5.62 Inf     153.2     175.2     d 
+ Moderate pCO2 10   169.1 5.75 Inf     157.8     180.4     d 
+ Low pCO2      10   182.4 6.12 Inf     170.4     194.4     d 
+
+Confidence level used: 0.95 
+P value adjustment: tukey method for comparing a family of 12 estimates 
+significance level used: alpha = 0.05 
+NOTE: If two or more means share the same grouping symbol,
+      then we cannot show them to be different.
+      But we also did not show them to be the same. 

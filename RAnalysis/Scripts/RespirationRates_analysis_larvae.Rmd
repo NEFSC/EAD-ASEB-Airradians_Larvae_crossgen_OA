@@ -1,0 +1,817 @@
+---
+title: "RespirationRates_Analysis"
+author: "Samuel Gurr"
+date: "2023-04-20"
+output: pdf_document
+---
+
+# Objectives: 
+
+* (i) view the mean, variation, and number of samples
+
+* (ii) plot the data 
+
+* (ii) 
+
+### set up load libraries and set working dir for the script 
+```{r setup, include= FALSE, echo = FALSE}
+
+# LOAD PACKAGES :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(lme4)
+library(lmerTest)
+library(performance)
+library(car)
+library(kableExtra)
+library(pander)
+library(data.table)
+library(Rmisc)
+library(devtools)
+library(ggpubr)
+library(SciViews)
+
+# SET WORKING DIRECTORY :::::::::::::::::::::::::::::::::::::::::::::::
+# knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis")
+knitr::opts_knit$set(root.dir = 'C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis')
+
+
+```
+
+# load the data 
+
+* these data are the calculated rates, not the raw! 
+
+  * 'raw' rates achieved from the script RespirationRates_LoLin.R
+
+  * 'calc_raw' meaning subtracted from blanks and corrected for vessel volume - view the script RespirationRates_calc_larvae.Rmd
+
+
+```{r}
+# LOAD DATA :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+RR_master <- read.csv(file="Output/Respiration/RR_calc_raw_larvae.csv", header=T)
+unique(RR_master$Date)
+
+RR_master_Exp3  <- RR_master %>% 
+  dplyr::filter(Date %in% c('4/20/2022','4/22/2022')) %>% 
+  dplyr::mutate(Experiment = 2)
+
+write.csv(RR_master_Exp3, "Output/Respiration/RR_calc_Experiment_3.csv")
+
+
+RR_master_Exp5  <- RR_master %>% 
+  dplyr::filter(Date %in% '3/16/2023') %>% 
+  dplyr::mutate(Experiment = 5)
+
+write.csv(RR_master_Exp5, "Output/Respiration/RR_calc_Experiment_5.csv")
+
+RR_master_Exp6   <- RR_master %>% 
+  dplyr::filter(Date %in% c('4/7/2023', '4/12/2023','4/21/2023')) %>% 
+  dplyr::mutate(Expeirment = 6)
+
+write.csv(RR_master_Exp6, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_6.csv")
+```
+
+# DATA ANALYSIS
+
+### Summary tables
+
+* lets look at the means, variation, and replication within each stage!
+
+```{r respiration rates at each time point, echo = FALSE}
+
+Exp3_SumTable <- RR_master_Exp3 %>%  
+                      summarySE(measurevar="resp_umol_hr_indiv", 
+                                groupvars=c("Date","pCO2_parents", "pCO2_offspring")) %>% 
+                      dplyr::arrange(resp_umol_hr_indiv)
+Exp3_SumTable # lowest are naive parents under mid and high; highest are habituated parents under low!
+
+write.csv(Exp3_SumTable, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_3_meansbytank.csv")
+
+
+Exp5_SumTable <- RR_master_Exp5 %>%  
+                      summarySE(measurevar="resp_umol_hr_indiv", 
+                                groupvars=c("Date","pCO2_parents", "pCO2_offspring")) %>% 
+                      dplyr::arrange(resp_umol_hr_indiv)
+Exp5_SumTable
+write.csv(Exp5_SumTable, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_5_meansbytank.csv")
+
+
+Exp6_SumTable <- RR_master_Exp6 %>%  
+            summarySE(measurevar="resp_umol_hr_indiv", 
+                      groupvars=c("Date","pCO2_parents", "pCO2_offspring")) %>% 
+            dplyr::arrange(resp_umol_hr_indiv)
+Exp6_SumTable
+write.csv(RR_master_Exp6, "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/RR_calc_Experiment_6_meansbytank.csv")
+
+```
+
+
+## Figures for Experiment # 3 
+
+```{r, Expeirment #3 figures, echo = FALSE, results='hide',message = FALSE, warning = FALSE}
+
+RR_master_Exp3$pCO2_parents   <- factor(RR_master_Exp3$pCO2_parents, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+RR_master_Exp3$pCO2_offspring <- factor(RR_master_Exp3$pCO2_offspring, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+
+
+# Summarise Percent Deformities for plotting 
+Exp3_mean_tank    <- RR_master_Exp3 %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+
+Exp3_mean_overall <- Exp3_mean_tank %>% 
+                          dplyr::select(Date, pCO2_parents, pCO2_offspring, mean_RR) %>% 
+                          dplyr::group_by(Date, pCO2_parents,pCO2_offspring) %>% 
+                          dplyr::summarise(mean_RR_overall = mean(mean_RR), 
+                                           n       = n(),
+                                           sd_RR   = sd(mean_RR),
+                                           se_RR   = sd_RR/(sqrt(n)))
+
+
+
+
+
+# PLOT
+
+Exp3_barplot <- ggplot(Exp3_mean_tank) +
+                        geom_errorbar(aes(x=pCO2_offspring, 
+                                           ymin=mean_RR-se_RR, 
+                                           ymax=mean_RR+se_RR), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=pCO2_offspring, y=mean_RR,fill=factor(pCO2_offspring)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #3", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "RR") +
+                         scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=12),
+                              legend.position="none") +
+                        facet_wrap(~Date * pCO2_parents) # scales = "free_y")
+
+Exp3_MeanSE <- Exp3_mean_tank  %>% 
+                        ggplot(aes(x=pCO2_offspring, 
+                                 y=mean_RR, 
+                                 colour=pCO2_offspring)) +
+                             # scale_linetype(c("dotted","solid")) +
+                             scale_colour_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                             geom_point(aes(colour = pCO2_offspring), 
+                                        position = position_dodge2(width = 0.75)) + 
+                             stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                             stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', 
+                                          position = position_dodge2(width = 1)) +
+                             labs(title="Experiment #3", 
+                                  x ="pCO2 offspring", 
+                                  y = "RR") +
+                             theme_classic() +
+                             theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                             facet_wrap(~Date * pCO2_parents)
+
+
+Exp3_boxpots <- RR_master_Exp3 %>%   # omits a single dramatic outlier
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("Experiment #3") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                             facet_wrap(~Date * pCO2_parents, scales = "free_y")
+
+# OUTPUT THE PLOT
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_MeanSE.pdf"), width = 6, height = 6)
+print(Exp3_MeanSE)
+dev.off()
+
+
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_3_barplots.pdf"), width = 6, height = 6)
+print(Exp3_barplot)
+dev.off()
+```
+
+## Statistics for Experiment # 3
+
+```{r Experiment #3 stats}
+library(Rmisc)
+Exp3_mean_tank <- RR_master_Exp3 %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+Exp3_mean_T1 <- Exp3_mean_tank %>% dplyr::filter(Date %in% '4/20/2022')
+Exp3_mean_T2 <- Exp3_mean_tank %>% dplyr::filter(Date %in% '4/22/2022')
+
+Exp3_TwoWayANOVA_T1 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp3_mean_T1))
+shapiro.test(resid(Exp3_TwoWayANOVA_T1)) # 0.4181
+leveneTest(Exp3_TwoWayANOVA_T1) # 0.3977
+Exp3_SRH_T1 <- scheirerRayHare(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp3_mean_T1))
+Exp3_SRH_T1 # n.s.
+
+
+Exp6_OneANOVA_T1_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_LOW)) # 0.3005
+leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
+summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
+
+# Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
+#                           data=(Exp6_mean_T1 %>% 
+#                                   dplyr::filter(pCO2_parents %in% '800 uatm')))
+# shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
+# leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
+# summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
+
+Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_HIGH)) # pass
+leveneTest(Exp6_OneANOVA_T1_HIGH) # pass
+summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
+
+
+
+
+
+# time point 2  4/12/2023
+Exp3_TwoWayANOVA_T2 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp3_mean_T2))
+shapiro.test(resid(Exp3_TwoWayANOVA_T2)) # 0.4111
+leveneTest(Exp3_TwoWayANOVA_T2) # 0.7646
+summary(aov(Exp3_TwoWayANOVA_T2))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)  
+# pCO2_parents                 2 6.350e-08 3.177e-08   0.580  0.574  
+# pCO2_offspring               2 3.284e-07 1.642e-07   2.997  0.085 .
+# pCO2_parents:pCO2_offspring  4 4.573e-07 1.143e-07   2.087  0.141  
+# Residuals                   13 7.122e-07 5.479e-08   
+
+
+
+Exp3_OneANOVA_T2_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_LOW)) # pass
+leveneTest(Exp3_OneANOVA_T2_LOW) # pass
+summary(aov(Exp3_OneANOVA_T2_LOW)) # n.s.
+
+Exp3_OneANOVA_T2_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_MOD)) #  pass
+leveneTest(Exp3_OneANOVA_T2_MOD) # pass
+summary(aov(Exp3_OneANOVA_T2_MOD))
+
+Exp3_OneANOVA_T2_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp3_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp3_OneANOVA_T2_HIGH)) # pass
+leveneTest(Exp3_OneANOVA_T2_HIGH) # pass
+summary(aov(Exp3_OneANOVA_T2_HIGH)) # marginal effect
+TukeyHSD(aov(Exp3_OneANOVA_T2_HIGH))
+
+```
+
+## Figures for Experiment # 5 
+
+```{r, Expeirment #5 figures, echo = FALSE, results='hide',message = FALSE, warning = FALSE}
+
+RR_master_Exp5$pCO2_parents   <- factor(RR_master_Exp5$pCO2_parents, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+RR_master_Exp5$pCO2_offspring <- factor(RR_master_Exp5$pCO2_offspring, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+
+
+# Summarise Percent Deformities for plotting 
+Exp5_mean_tank    <- RR_master_Exp5 %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+
+Exp5_mean_overall <- Exp5_mean_tank %>% 
+                          dplyr::select(Date, pCO2_parents, pCO2_offspring, mean_RR) %>% 
+                          dplyr::group_by(Date, pCO2_parents,pCO2_offspring) %>% 
+                          dplyr::summarise(mean_RR_overall = mean(mean_RR), 
+                                           n       = n(),
+                                           sd_RR   = sd(mean_RR),
+                                           se_RR   = sd_RR/(sqrt(n)))
+
+
+
+
+
+# PLOT
+
+Exp5_barplot <- ggplot(Exp5_mean_tank) +
+                        geom_errorbar(aes(x=pCO2_offspring, 
+                                           ymin=mean_RR-se_RR, 
+                                           ymax=mean_RR+se_RR), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=pCO2_offspring, y=mean_RR,fill=factor(pCO2_offspring)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #5", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "RR") +
+                         scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=12),
+                              legend.position="none") +
+                        facet_wrap(~Date * pCO2_parents) # scales = "free_y")
+
+Exp5_MeanSE <- Exp5_mean_tank  %>% 
+                        ggplot(aes(x=pCO2_offspring, 
+                                 y=mean_RR, 
+                                 colour=pCO2_offspring)) +
+                             # scale_linetype(c("dotted","solid")) +
+                             scale_colour_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                             geom_point(aes(colour = pCO2_offspring), 
+                                        position = position_dodge2(width = 0.75)) + 
+                             stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                             stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', 
+                                          position = position_dodge2(width = 1)) +
+                             labs(title="Experiment #5", 
+                                  x ="pCO2 offspring", 
+                                  y = "RR") +
+                             theme_classic() +
+                             theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                             facet_wrap(~Date * pCO2_parents)
+
+
+Exp5_boxpots <- RR_master_Exp5 %>%   # omits a single dramatic outlier
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("Experiment #5") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                                  facet_wrap(~pCO2_parents)
+
+# OUTPUT THE PLOT
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_5_MeanSE.pdf"), width = 6, height = 4)
+print(Exp5_MeanSE)
+dev.off()
+
+
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_5_barplots.pdf"), width = 6, height = 4)
+print(Exp5_barplot)
+dev.off()
+```
+
+## Statistics for Experiment # 5
+
+```{r Experiment #5 stats}
+
+Exp5_mean_tank <- RR_master_Exp5 %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+
+Exp5_TwoWayANOVA <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp5_mean_tank))
+shapiro.test(resid(Exp5_TwoWayANOVA)) # 0.07752
+leveneTest(Exp5_TwoWayANOVA) # 0.6281
+summary(aov(Exp5_TwoWayANOVA))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents                 1 7.572e-09 7.572e-09   2.572  0.140
+# pCO2_offspring               2 4.816e-09 2.408e-09   0.818  0.469
+# pCO2_parents:pCO2_offspring  2 2.866e-09 1.433e-09   0.487  0.629
+# Residuals                   10 2.944e-08 2.944e-09
+
+Exp5_TwoWayANOVA_T2 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp5_mean_tank %>% 
+                                  dplyr::filter(Date %in% '4/22/2022')))
+shapiro.test(resid(Exp5_TwoWayANOVA_T2)) # 0.1103
+leveneTest(Exp5_TwoWayANOVA_T2) # 0.8943
+summary(aov(Exp5_TwoWayANOVA_T2))
+#                Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents    2 4.294e-09 2.147e-09   0.746  0.573
+# pCO2_offspring  1 7.751e-09 7.751e-09   2.692  0.243
+# Residuals       2 5.758e-09 2.879e-09 
+
+
+
+Exp5_OneANOVA_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp5_mean_tank %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp5_OneANOVA_LOW)) # 0.4653
+leveneTest(Exp5_OneANOVA_LOW) # 0.7043
+summary(aov(Exp5_OneANOVA_LOW))
+#                Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_offspring  2 2.440e-11 1.219e-11   0.041   0.96
+# Residuals       4 1.194e-09 2.984e-10
+
+
+Exp5_OneANOVA_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp5_mean_tank %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp5_OneANOVA_MOD)) # 0.3907
+leveneTest(Exp5_OneANOVA_MOD) # 0.5523
+summary(aov(Exp5_OneANOVA_MOD))
+#                Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_offspring  2 7.657e-09 3.829e-09   0.813  0.487
+# Residuals       6 2.825e-08 4.708e-09
+```
+
+
+## Figures for Experiment # 6
+
+```{r, Expeirment #6 figures, echo = FALSE, results='hide',message = FALSE, warning = FALSE}
+
+RR_master_Exp6$pCO2_parents   <- factor(RR_master_Exp6$pCO2_parents, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+RR_master_Exp6$pCO2_offspring <- factor(RR_master_Exp6$pCO2_offspring, levels = c("500 uatm", "800 uatm", "1200 uatm"))
+
+
+# Summarise Percent Deformities for plotting 
+Exp6_mean_tank    <- RR_master_Exp6 %>% 
+                            # dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+
+Exp6_mean_overall <- Exp6_mean_tank %>% 
+                          dplyr::select(Date, pCO2_parents, pCO2_offspring, mean_RR) %>% 
+                          dplyr::group_by(Date, pCO2_parents,pCO2_offspring) %>% 
+                          dplyr::summarise(mean_RR_overall = mean(mean_RR), 
+                                           n       = n(),
+                                           sd_RR   = sd(mean_RR),
+                                           se_RR   = sd_RR/(sqrt(n)))
+
+
+
+
+
+# PLOT
+
+Exp6_barplot <- ggplot(Exp6_mean_tank) +
+                        geom_errorbar(aes(x=pCO2_offspring, 
+                                           ymin=mean_RR-se_RR, 
+                                           ymax=mean_RR+se_RR), 
+                                       width=0, # removes the horizontal line
+                                       colour="black", 
+                                       size=1) +
+                        geom_bar(aes(x=pCO2_offspring, y=mean_RR,fill=factor(pCO2_offspring)), 
+                                  stat="identity",
+                                 width = 0.75,
+                                 alpha = 0.5) +
+                        labs(title="Experiment #6", 
+                            x ="pCO2 Offspring Exposure", 
+                            y = "RR") +
+                         scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=12),
+                              legend.position="none") +
+                        facet_wrap(~Date * pCO2_parents) # scales = "free_y")
+
+Exp6_MeanSE <- RR_master_Exp6 %>%  #Exp6_mean_tank  %>% 
+                        # dplyr::filter(!mean_RR>0.0010) %>% 
+                        dplyr::filter(!resp_umol_hr_indiv>0.0020) %>% 
+                        ggplot(aes(x=pCO2_offspring, 
+                                 # y=mean_RR,
+                                   y = resp_umol_hr_indiv,
+                                 colour=pCO2_offspring)) +
+                             # scale_linetype(c("dotted","solid")) +
+                             scale_colour_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                             geom_point(aes(colour = pCO2_offspring), 
+                                        position = position_dodge2(width = 0.75)) + 
+                             stat_summary(fun.y="mean", size = 0.8,
+                                          position = position_dodge2(width = 1)) +
+                             stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', 
+                                          position = position_dodge2(width = 1)) +
+                             labs(title="Experiment #6", 
+                                  x ="pCO2 offspring", 
+                                  y = "RR") +
+                             theme_classic() +
+                             theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                             facet_wrap(~Date * pCO2_parents, scales = "free_y")
+
+
+Exp6_boxpots <- RR_master_Exp6 %>%   # omits a single dramatic outlier
+                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            ggplot(aes(x = factor(pCO2_offspring), 
+                                       y = resp_umol_hr_indiv, 
+                                       fill = pCO2_offspring)) +
+                                   geom_boxplot(alpha = 0.5, # color hue
+                                       width=0.6, # boxplot width
+                                       outlier.size=0, # make outliers small
+                                       position = position_dodge(preserve = "single")) + 
+                                   geom_point(pch = 19, 
+                                              position = position_jitterdodge(0.5), 
+                                              size=1) +
+                                   scale_fill_manual(breaks=c("500 uatm", "800 uatm", "1200 uatm"), 
+                                             values=c("forestgreen","orange", "purple")) +
+                                   #scale_colour_manual(values=c("forestgreen","orange")) +
+                                   theme_classic() + 
+                                   ggtitle("Experiment #6") +
+                                   theme(axis.title.y=element_text(size=7),
+                                         axis.title.x=element_text(size=7),
+                                         axis.text.x=element_text(size=7),
+                                         legend.position = "none") +
+                                   #ylim(0, 0.2) +
+                                   stat_summary(fun.y=mean, 
+                                                geom = "errorbar", 
+                                                aes(ymax = ..y.., ymin = ..y..), 
+                                                width = 0.6, 
+                                                size=0.4, 
+                                                linetype = "dashed", 
+                                                position = position_dodge(preserve = "single")) +
+                                  facet_wrap(~pCO2_parents)
+
+# OUTPUT THE PLOT
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_MeanSE.pdf"), width = 6, height = 8)
+print(Exp6_MeanSE)
+dev.off()
+
+
+pdf(paste0(filename = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Output/Respiration/plots/Experiment_6_barplots.pdf"), width = 6, height = 8)
+print(Exp6_barplot)
+dev.off()
+```
+
+## Statistics for Experiment # 5
+
+```{r Experiment #5 stats}
+
+Exp6_mean_tank <- RR_master_Exp6 %>% 
+                            dplyr::filter(!resp_umol_hr_indiv > 0.0002) %>% 
+                            dplyr::select(Date, pCO2_parents, pCO2_offspring,Chamber_tank, resp_umol_hr_indiv) %>% 
+                            dplyr::group_by(Date, pCO2_parents,pCO2_offspring, Chamber_tank) %>% 
+                            dplyr::summarise(mean_RR = mean(resp_umol_hr_indiv), 
+                                             n       = n(),
+                                             sd_RR   = sd(mean_RR),
+                                             se_RR   = sd_RR/(sqrt(n)))
+unique(RR_master_Exp6$Date) # "4/12/2023" "4/21/2023" "4/7/2023" 
+Exp6_mean_T1 <- Exp6_mean_tank %>% dplyr::filter(Date %in% '4/7/2023')
+Exp6_mean_T2 <- Exp6_mean_tank %>% dplyr::filter(Date %in% '4/12/2023')
+Exp6_mean_T3 <- Exp6_mean_tank %>% dplyr::filter(Date %in% '4/21/2023')
+
+
+# time point 1  4/7/2023
+Exp6_TwoWayANOVA_T1 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp6_mean_T1))
+shapiro.test(resid(Exp6_TwoWayANOVA_T1)) # 0.7962
+leveneTest(Exp6_TwoWayANOVA_T1) # 0.7962
+summary(aov(Exp6_TwoWayANOVA_T1))
+#                             Df    Sum Sq   Mean Sq F value Pr(>F)
+# pCO2_parents                 2 3.886e-08 1.943e-08   2.137  0.147
+# pCO2_offspring               2 1.100e-09 5.520e-10   0.061  0.941
+# pCO2_parents:pCO2_offspring  4 7.604e-08 1.901e-08   2.091  0.124
+# Residuals                   18 1.636e-07 9.089e-09
+
+Exp6_OneANOVA_T1_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+
+shapiro.test(resid(Exp6_OneANOVA_T1_LOW)) # 0.3005
+leveneTest(Exp6_OneANOVA_T1_LOW) # 0.6687
+summary(aov(Exp6_OneANOVA_T1_LOW)) # n.s.
+kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '500 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('1200 uatm', '800 uatm') ~ 'change'
+                                  )))
+             )
+
+
+Exp6_OneANOVA_T1_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_MOD)) # 0.1316
+leveneTest(Exp6_OneANOVA_T1_MOD) # 0.3446
+summary(aov(Exp6_OneANOVA_T1_MOD)) # n.s.
+kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '800 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('500 uatm', '1200 uatm') ~ 'change'
+                                  )))
+             )
+
+
+Exp6_OneANOVA_T1_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T1_HIGH)) # pass
+leveneTest(Exp6_OneANOVA_T1_HIGH) # pass
+summary(aov(Exp6_OneANOVA_T1_HIGH)) # n.s.
+kruskal.test(mean_RR~base_change, 
+                          data=(Exp6_mean_T1 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm') %>% 
+                                  dplyr::mutate(base_change = case_when(
+                                    pCO2_offspring == '1200 uatm' ~ 'baseline',
+                                    pCO2_offspring %in% c('500 uatm', '800 uatm') ~ 'change'
+                                  )))
+             )
+
+
+
+
+# time point 2  4/12/2023
+Exp6_TwoWayANOVA_T2 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp6_mean_T2))
+shapiro.test(resid(Exp6_TwoWayANOVA_T2)) # no pass
+leveneTest(Exp6_TwoWayANOVA_T2) # pass
+Exp6_SRH_T2 <- scheirerRayHare(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp6_mean_T2))
+Exp6_SRH_T2 # n.s.
+
+
+Exp6_OneANOVA_T2_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T2_LOW)) # pass
+leveneTest(Exp6_OneANOVA_T2_LOW) # pass
+summary(aov(Exp6_OneANOVA_T2_LOW)) # n.s.
+
+Exp6_OneANOVA_T2_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T2_MOD)) # no pass
+leveneTest(Exp6_OneANOVA_T2_MOD) # pass
+Exp6_KW_T2_MOD <- kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+Exp6_KW_T2_MOD # n.s.
+
+Exp6_OneANOVA_T2_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T2 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T2_HIGH)) # pass
+leveneTest(Exp6_OneANOVA_T2_HIGH) # pass
+summary(aov(Exp6_OneANOVA_T2_HIGH)) # n.s.
+
+
+
+
+
+
+
+
+
+
+# time point 3  4/21/2023
+Exp6_TwoWayANOVA_T3 <- lm(mean_RR~pCO2_parents*pCO2_offspring, 
+                          data=(Exp6_mean_T3))
+shapiro.test(resid(Exp6_TwoWayANOVA_T3)) # pass
+leveneTest(Exp6_TwoWayANOVA_T3) # pass
+summary(aov(Exp6_TwoWayANOVA_T3)) # n.s.
+
+Exp6_OneANOVA_T3_LOW <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T3 %>% 
+                                  dplyr::filter(pCO2_parents %in% '500 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T3_LOW)) # pass
+leveneTest(Exp6_OneANOVA_T3_LOW) # pass
+summary(aov(Exp6_OneANOVA_T3_LOW)) # n.s.
+
+Exp6_OneANOVA_T3_MOD <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T3 %>% 
+                                  dplyr::filter(pCO2_parents %in% '800 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T3_MOD)) # no pass
+leveneTest(Exp6_OneANOVA_T3_MOD) # pass
+summary(aov(Exp6_OneANOVA_T3_MOD))# n.s.
+
+
+
+Exp6_OneANOVA_T3_HIGH <- lm(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T3 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+shapiro.test(resid(Exp6_OneANOVA_T3_HIGH)) # pass
+leveneTest(Exp6_OneANOVA_T3_HIGH) # no pass
+Exp6_KW_T3_HIGH <- kruskal.test(mean_RR~pCO2_offspring, 
+                          data=(Exp6_mean_T3 %>% 
+                                  dplyr::filter(pCO2_parents %in% '1200 uatm')))
+Exp6_KW_T3_HIGH # n.s. - missing data?
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

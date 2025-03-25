@@ -1,0 +1,275 @@
+---
+title: "Metamorphosis"
+author: "Katie McFarland"
+date: "4/24/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# SET WORKING DIRECTORY 
+ knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Data")
+  knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis/Data")
+```
+
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(emmeans)
+library(rcompanion)
+library(FSA)
+```
+
+
+### Load Data
+```{r}
+#Here we are assing our data fram the name "df" so that we do not have to type out the full file name everytime we want to call it.
+df<-read.csv("metamorphosis.csv", header = T)
+
+#df$Percent.deformed=as.numeric(df$Percent.deformed)
+
+df$Parent=as.factor(df$Parent)
+df$Ttreatment=as.factor(df$Treatment)
+df$Exposure.OA=as.factor(df$Exposure.OA)
+df$Rep=as.factor(df$Rep)
+
+df$Generation=as.factor(df$Generation)
+
+df$Treatment <- factor(df$Treatment,levels = c("Low OA", "Moderate OA", "High OA"))
+
+df$Exposure.OA <- factor(df$Exposure.OA,levels = c("LOW", "MODERATE", "HIGH"))
+
+df$Parent <- factor(df$Parent,levels = c("LOW", "MODERATE", "HIGH"))
+
+#to look at columns names of your data frame
+head(df)
+
+#Sturcture of the data - to check that variables are properly assigned to facotr or variable
+str(df)
+```
+
+# Calculations
+```{r}
+df$precent.metamorphose <- (df$live_spat)/(df$live_spat+df$live_larvae)
+```
+
+
+```{r}
+
+df_F2_21 <- df%>%
+  filter(Age=="21")
+
+
+df_F3_19 <- df%>%
+  filter(Age=="19")
+```
+
+# Percent Successful Metamorphosis = live_spat / (live spat + dead spat)
+```{r}
+ggplot(data=df_F2_21, aes(x=Exposure.OA, y=sucessful.metamorphosis, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Successful metamorphosis (2023: F2 Larvae - Age 21 days) ", x ="Treatment", y = "Percent sucessful metamorphosis")
+
+
+
+# MEan SE
+Perc_Met_MeanSE <- ggplot(df_F2_21,
+                       aes(x=Exposure.OA, 
+                                         y=sucessful.metamorphosis,
+                                         fill=factor(Exposure.OA)), 
+                                  stat="identity") +
+                       geom_point(aes(colour = Exposure.OA), 
+                                        position = position_dodge2(width = 0.2), size =2) + 
+                       stat_summary(fun.y="mean", size = 0.5,
+                                          position = position_dodge2(width = 1)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.1, size = 0.5,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","orange")) + 
+                        labs(title="Percent Successful metamorphosis (2023: F2 Larvae - Age 21 days)", 
+                            x ="Treatment", 
+                            y = "Percent sucessful metamorphosis") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+print(Perc_Met_MeanSE)
+
+
+Perc_Mort_MeanSE <- ggplot(df_F2_21,
+                       aes(x=Exposure.OA, 
+                                         y=1-(sucessful.metamorphosis),
+                                         fill=factor(Exposure.OA)), 
+                                  stat="identity") +
+                       geom_point(aes(colour = Exposure.OA), 
+                                        position = position_dodge2(width = 0.2), size =2) + 
+                       stat_summary(fun.y="mean", size = 0.5,
+                                          position = position_dodge2(width = 1)) +
+                       stat_summary(fun.min = function(x) mean(x) - sd(x)/sqrt(length(x)), 
+                                          fun.max = function(x) mean(x) + sd(x)/sqrt(length(x)),
+                                          geom = 'errorbar', width = 0.1, size = 0.5,
+                                          position = position_dodge2(width = 0.2),
+                                    color=c("forestgreen","orange")) + 
+                        labs(title="Post-metamorphic mortality (2023: F2 Larvae - Age 21 days)", 
+                            x ="Treatment", 
+                            y = "Percent mortality") +
+                        # scale_fill_manual(breaks=c("Low pCO2", "Moderate pCO2", "High pCO2"), 
+                        #                    values=c("forestgreen","orange", "purple")) +
+                        scale_color_manual(breaks=c("Low pCO2", "Moderate pCO2"), 
+                                           values=c("forestgreen","orange")) +
+                        scale_x_discrete(labels=c("L", "M")) +
+                        scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) +
+                        theme_classic() +
+                        theme(panel.grid.major = element_blank(), 
+                              panel.grid.minor = element_blank(), 
+                              axis.title.x=element_blank(),
+                              axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=1),
+                              axis.text=element_text(size=8),
+                              plot.title = element_text(size=12),
+                              legend.position="none") 
+```
+
+## precent.metamorphose = (live sapt / (live spat + live larvae)) 
+```{r}
+ggplot(data=df_F2_21, aes(x=Exposure.OA, y=precent.metamorphose, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Metamorphosed (2023: F2 Larvae - Age 21 days) ", x ="Treatment", y = "Percent metamorphosed")
+```
+
+# Percent Successful Metamorphosis = live_spat / (live spat + dead spat)
+```{r}
+ggplot(data=df_F3_19, aes(x=Exposure.OA, y=sucessful.metamorphosis, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent Successful metamorphosis, grouped by parentage (2023: F3 Larvae - Age 19 days) ", x ="Treatment", y = "Percent sucessful metamorphosis")+
+  facet_wrap("Parent")
+```
+
+## precent.metamorphose = (live sapt / (live spat + live larvae)) 
+```{r}
+df_F3_19 <- df%>%
+  filter(Age=="19")
+
+ggplot(data=df_F3_19, aes(x=Exposure.OA, y=precent.metamorphose, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs( x ="Treatment", y = "Percent metamorphosed")+
+  ggtitle("Percent metamorphesed rouped by parentage (2023: F3 Larvae - Age 19 days) ")+
+  facet_wrap("Parent")
+
+```
+
+
+```{r}
+
+ggplot(data=df_F3_19, aes(x=Exposure.OA, y=metamorphesed, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent metamorphesed, grouped by parentage (2023: F3 Larvae - Age 19 days) ", x ="Treatment", y = "Percent metamorphosed")+
+  facet_wrap("Parent")
+```
+# Looking at just high and low parentage
+```{r}
+
+df_F3_19_trim <- df_F3_19%>%
+   filter(Parent %in% c("HIGH", "LOW"))
+  #filter(Parent=="HIGH, LOW")
+
+ggplot(data=df_F3_19_trim, aes(x=Exposure.OA, y=metamorphesed, fill=Exposure.OA)) +
+  geom_boxplot()+  scale_fill_manual(values=c("forestgreen","orange", "purple"))+
+  theme_bw() +  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  labs(title="Percent metamorphesed, grouped by parentage (2023: F3 Larvae - Age 19 days) ", x ="Treatment", y = "Percent sucessful metamorphosis")+
+  facet_wrap("Parent")
+```
+
+```{r}
+df$sucessful.metamorphosis_trans <- asin(sqrt(df$sucessful.metamorphosis))
+
+df_F2_21 <- df%>%
+  filter(Age=="21")
+
+df_F3_19 <- df%>%
+  filter(Age=="19")
+```
+
+# ANOVA for F2 day 21
+NO significant affect (p = 0.0694)
+```{r}
+aovMOD_F2_21 <- lm(sucessful.metamorphosis ~ Exposure.OA, data=df_F2_21)
+shapiro.test(resid(aovMOD_F2_21)) # 0.2758 -  norm
+leveneTest(aovMOD_F2_21) # 0.2909- pass
+
+summary(aov(aovMOD_F2_21))
+aovMOD_F2_21_posthoc <- emmeans(aovMOD_F2_21, pairwise~Exposure.OA, adjust="tukey")
+multcomp::cld(aovMOD_F2_21_posthoc$emmeans,alpha = 0.5, Letters = letters)
+
+#aovMOD_F2_21 <- lm(sucessful.metamorphosis_trans ~ Parent * Exposure.OA, data=df_F2_21)
+#shapiro.test(resid(aovMOD_F2_21)) # 0.05757 -  norm
+#leveneTest(aovMOD_F2_21) # 0.364- pass
+
+
+```
+
+# ANOVA for F3 day 19
+```{r}
+aovMOD_F3_19 <- lm(sucessful.metamorphosis ~ Parent * Exposure.OA, data=df_F3_19, random = ~Rep)
+shapiro.test(resid(aovMOD_F3_19)) # 0.001961 -  not norm
+leveneTest(aovMOD_F3_19) # 0.5261- pass
+
+df$sucessful.metamorphosis_trans <- asin(sqrt(df$sucessful.metamorphosis))
+
+aovMOD_F3_19 <- lm(sucessful.metamorphosis_trans ~ Parent * Exposure.OA, data=df_F3_19)
+shapiro.test(resid(aovMOD_F3_19)) # 0.05757 -  norm
+leveneTest(aovMOD_F3_19) # 0.364- pass
+
+summary(aov(aovMOD_F3_19))
+aovMOD_F3_19_posthoc <- emmeans(aovMOD_F3_19, pairwise~Parent, adjust="tukey")
+multcomp::cld(aovMOD_F3_19_posthoc$emmeans,alpha = 0.5, Letters = letters)
+```
+
+
+
+
+
+
+
+
+
+```{r}
+kruskal.test(sucessful.metamorphosis ~ Exposure.OA, data = df_F2_21)
+```
+
+```{r}
+scheirerRayHare(sucessful.metamorphosis ~ Exposure.OA*Parent,
+                data = df_F3_19)
+
+dunnTest(sucessful.metamorphosis ~ Exposure.OA,
+                data = df_F3_19,
+              method="bh")
+
+dunnTest(sucessful.metamorphosis ~ Parent,
+                data = df_F3_19,
+              method="bh")
+```
+

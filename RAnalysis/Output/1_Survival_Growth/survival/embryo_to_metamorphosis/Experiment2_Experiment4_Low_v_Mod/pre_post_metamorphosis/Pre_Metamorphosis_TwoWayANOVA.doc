@@ -1,0 +1,5 @@
+                       Df   Sum Sq  Mean Sq F value Pr(>F)
+Larvae_pCO2             1 0.001225 0.001225   0.644  0.438
+Generation              1 0.002470 0.002470   1.298  0.277
+Larvae_pCO2:Generation  1 0.001441 0.001441   0.757  0.401
+Residuals              12 0.022836 0.001903               

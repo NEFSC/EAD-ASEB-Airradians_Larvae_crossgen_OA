@@ -1,0 +1,6 @@
+ANOVA Table (type III tests)
+
+           Effect  DFn   DFd       F        p p<.05   ges
+1     Larvae_pCO2 1.00  7.00   4.193 8.00e-02       0.206
+2             Age 1.75 12.24 640.833 6.66e-13     * 0.981
+3 Larvae_pCO2:Age 1.75 12.24   1.082 3.61e-01       0.081

@@ -1,0 +1,24 @@
+
+Call:
+betareg(formula = Percent.deformed ~ Larvae_pCO2, data = df_Exp2_OM)
+
+Pearson residuals:
+    Min      1Q  Median      3Q     Max 
+-1.1401 -0.7848  0.0287  0.4089  2.8827 
+
+Coefficients (mean model with logit link):
+                         Estimate Std. Error z value Pr(>|z|)    
+(Intercept)               -2.2081     0.1606 -13.746   <2e-16 ***
+Larvae_pCO2Moderate pCO2  -0.3768     0.2603  -1.448    0.148    
+Larvae_pCO2High pCO2       4.1679     0.2306  18.070   <2e-16 ***
+
+Phi coefficients (precision model with identity link):
+      Estimate Std. Error z value Pr(>|z|)  
+(phi)    83.58      32.87   2.542    0.011 *
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+
+Type of estimator: ML (maximum likelihood)
+Log-likelihood: 26.78 on 4 Df
+Pseudo R-squared: 0.9638
+Number of iterations: 86 (BFGS) + 3 (Fisher scoring) 

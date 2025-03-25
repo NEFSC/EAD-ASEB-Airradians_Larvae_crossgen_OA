@@ -1,0 +1,11 @@
+ Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+ Low pCO2      0.0387 0.0394  9 -0.05036    0.128  a    
+ Moderate pCO2 0.0805 0.0394  9 -0.00861    0.170  a    
+ High pCO2     0.8297 0.0394  9  0.74064    0.919   b   
+
+Confidence level used: 0.95 
+P value adjustment: tukey method for comparing a family of 3 estimates 
+significance level used: alpha = 0.05 
+NOTE: If two or more means share the same grouping symbol,
+      then we cannot show them to be different.
+      But we also did not show them to be the same. 

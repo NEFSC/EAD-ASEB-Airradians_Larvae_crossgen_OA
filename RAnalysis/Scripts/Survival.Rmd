@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # SET WORKING DIRECTORY 
 # knitr::opts_knit$set(root.dir = "C:/Users/katherine.mcfarland/Documents/GitHub/EAD-ASEB-Airradians_multigen_OA/larvae") # Katie's
 #knitr::opts_knit$set(root.dir = "C:/Users/samjg/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's
-knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/EAD-ASEB-Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
+knitr::opts_knit$set(root.dir = "C:/Users/samuel.gurr/Documents/Github_repositories/Airradians_Larvae_crossgen_OA/RAnalysis") # Sam's work
 ```
 
 ### LOAD PACKAGES
@@ -46,7 +46,7 @@ library(gtsummary) # tbl_survfit
 
 df<- read.csv("Data/larval_survival.csv", header = T) %>% 
                   dplyr::mutate(Percent_Survival = as.numeric(Percent_Survival_rel_dstage,
-                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_embryos))) %>% 
+                                Percent_Survival.embryo = as.numeric(Percent_Survival_rel_stocking))) %>% 
                   # dplyr::select(-treatment) %>%  # redundant column with Exposure_OA
                   
                   # rename the variables for consistency using 'case_when'
@@ -126,10 +126,33 @@ df_Exp6 <- df%>%
 ```
 
 
-# Plot data as barplots mean +- SE for each run
 
-## Manuscript 1; Expeirments 2 and 4
+### Account for destructive sampling for proportional data 
 
+* we samples without replacement for microscopy counts to estimate survivroship and occasionally for respiration 
+
+* the total destructive sampling is included in the column 'Destructive sampling' for those taken that day 
+
+* Important! the subsequenct sampling day should account for the destructive sampling taken the 
+day or days prior. For example consider the case below 
+
+  - Example: embryo stocking density is 100,000 in tank A. On day 2 we destructively sampled 150 larvae to 
+  complete microscopy counts and estimated 90,000 live larvae. On day 3 we destructively sampled 150 larvae 
+  to complete microscopy counts and estimated 50,000 live larvae. 
+  Quesion: how do you calculate percent survival at day 3?
+  Answer: 50,000/(100,000 - 150) * 100
+  we take the survival at day 3 and divide it by the stocking density (100,000) minus the number of larvae 
+  destructively sampled *before* day 3 ( 150)
+  
+* complete this below for all data 
+
+```{r proportion and percent data account for destructive sampling}
+?tidyr::pivot_wider
+
+df_Exp4 %>% 
+  
+  
+`````
 **output folder** = '1_Survival_Growth'
 
 * note that metamorphosis was observed at 10 dpf in F1s and 14 dpf in F2s, therfore 
@@ -355,7 +378,7 @@ df_Exp2 <- df_Exp2 %>%
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count))) %>% # remove the commas from these numbers- id as character if not removed!
           dplyr::rename(Count_alive = Count) %>% # rename to avoid confusion
-          dplyr::mutate(proportion = Percent_Survival/100,
+          dplyr::mutate(proportion = Percent_Survival_rel_stocking/100,
                         Count_total = case_when(proportion == 0 ~ 0,
                                                 proportion >0 ~
                                                  (1/as.numeric(proportion))*

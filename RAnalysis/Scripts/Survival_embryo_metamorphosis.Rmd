@@ -137,6 +137,37 @@ df_Exp6 <- df%>%
 ```
 
 
+
+### Account for destructive sampling for proportional data 
+
+* review the README! we sampled without replacement for microscopy counts to estimate survivorship and occasionally for respiration 
+
+* the total destructive sampling is included in the column 'Destructive sampling' for those taken that day 
+
+* Important! the subsequenct sampling day should account for the destructive sampling taken the 
+day or days prior. For example consider the case below 
+
+  - Example: embryo stocking density is 100,000 in tank A. On day 2 we destructively sampled 150 larvae to 
+  complete microscopy counts and estimated 90,000 live larvae. On day 3 we destructively sampled 150 larvae 
+  to complete microscopy counts and estimated 50,000 live larvae. 
+  Quesion: how do you calculate percent survival at day 3?
+  Answer: 50,000/(100,000 - 150) * 100
+  we take the survival at day 3 and divide it by the stocking density (100,000) minus the number of larvae 
+  destructively sampled *before* day 3 ( 150)
+  
+* complete this below for all data 
+
+```{r View data to assess how we addressed destructive sampling}
+
+View(df_Exp2)
+
+
+View(df_Exp4)
+  
+```
+
+
+
 # Plot data as barplots mean +- SE for each run
 
 ## Manuscript 1; Expeirments 2 and 4
@@ -359,10 +390,14 @@ to cater to this difference to make meaningful comparisons
 
 ### Experiment 2 F1s
 
-# note: as of 10/17/2024 we converted the percent survival data to a whole number of individuals alive and dead 
-# to run the Kaplan Meier and the Mixed cox proportional hazards models, this decision was made 
-# to understand why the survival probability differs from the raw percent survival - I found this data had no change in the 
-# kaplan meier at all
+* note: as of 10/17/2024 we converted the percent survival data to a whole number of individuals alive and dead  to run the Kaplan Meier and the Mixed cox proportional hazards models, this decision was made  to understand why the survival probability differs from the raw percent survival - I found this data had no change in the  kaplan meier at all
+
+
+* **Note** our stocking density is in the hundreds of thousands, so if we consolidate down to a smaller number (i.e. 100) and round to the nearest whole number a we need to do (for 0 and 1 live and dead counts) then decimal places repesent many individuals. 
+
+  * Consider this justification for the chosen normalization number for starting density **the lowest survival > 0 should not represented by 1 individual, not rounded down to zero.
+  
+  * What do I mean by this? lets say after 14 days replicate A has the lowest survival >0 as 0.01%. The replicate started at  250,000 animals so 0.01% translates to 2,500 larvae remaining. If we normalize to too small of a starting value then we round down to 0 and the 2,500 actual larvae remaining are not acknowledged. *to address this* call the min() survival value for data >0. If >=0.01 normalize to 100, if >=0.001 normalize to 1000 and so on
 
 ```{r format F1 Experiment #2}
 # create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
@@ -377,16 +412,18 @@ df_Exp2_rawvalues <- df_Exp2 %>%
                                                  as.numeric(Count_alive)),# proportion is that of alive
                            Count_dead = Count_total - Count_alive)
 
-
+# Determine how to normalize by assessing the min()  survival for data > 0
+min((df_Exp2 %>%  filter(Percent_Survival_rel_stocking> 0))$Percent_Survival_rel_stocking) # 0.01
+# 0.01 means we should normalize to 100 individuals
+ 
 df_Exp2_norm_100 <- df_Exp2 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count)),
-                        Count_norm_100 = round(proportion_rel_stocking*100)) %>% # remove the commas from these numbers- id as character if not removed!
-          dplyr::rename(Count_alive = Count_norm_100) %>% # rename to avoid confusion
-          dplyr::mutate(proportion = Percent_Survival/100,
+                        Count_alive = round(Percent_Survival_rel_stocking, digits = 0)) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::mutate(proportion = Percent_Survival_rel_stocking/100,
                         Count_total = round(case_when(proportion == 0 ~ 0,
-                                                proportion >0 ~ 100)),# proportion is that of alive
-                           Count_dead = round(Count_total - Count_alive))
+                                                proportion >0 ~ 100), digits = 0),# proportion is that of alive
+                           Count_dead = round(Count_total - Count_alive, digits = 0))
 
 
 df_Exp2$Count_alive + df_Exp2$Count_dead
@@ -407,8 +444,8 @@ for (i in 1:nrow(df_Exp2_norm_100)) {
    #count_alive <- round(df_Exp2[i,]$Count_alive/100) # divide all counts by 1000, round to nearest
    #count_dead  <- round(df_Exp2[i,]$Count_dead/100)  # divide all counts by 1000, round to nearest
    
-   count_alive <- round(df_Exp2_norm_100[i,]$Count_alive) # raw counts
-   count_dead  <- round(df_Exp2_norm_100[i,]$Count_dead)  # raw counts
+   count_alive <- (df_Exp2_norm_100[i,]$Count_alive) # raw counts
+   count_dead  <- (df_Exp2_norm_100[i,]$Count_dead)  # raw counts
    
    loopDF           <- data.frame(matrix(0,ncol = 6, nrow = (count_alive + count_dead))) 
    colnames(loopDF) <- (c('Parent_pCO2','Larvae_pCO2','Generation','Tank','Age','Count_dead'))
@@ -457,8 +494,8 @@ for (i in 1:nrow(df_Exp2_MEANS)) {
    #count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive/100) # divide all counts by 1000, round to nearest
    #count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead/100)  # divide all counts by 1000, round to nearest
 
-   count_alive <- round(df_Exp2_MEANS[i,]$mean_Count_alive) # divide all counts by 1000, round to nearest
-   count_dead  <- round(df_Exp2_MEANS[i,]$mean_Count_dead)  # divide all counts by 1000, round to nearest
+   count_alive <- (df_Exp2_MEANS[i,]$mean_Count_alive) # divide all counts by 1000, round to nearest
+   count_dead  <- (df_Exp2_MEANS[i,]$mean_Count_dead)  # divide all counts by 1000, round to nearest
    
    
    loopDF           <- data.frame(matrix(0,ncol = 3, nrow = (count_alive + count_dead))) 
@@ -576,10 +613,12 @@ dev.off()
 ```{r log-rank test survdiff F1 Experiment #2}
 
 Exp2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp2_larvaeMEANS)
-#                               N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2      11541     9682     9688   0.00342    0.0103
-# Larvae_pCO2=Moderate pCO2  9424     8038     8531  28.47029   82.1467
-# Larvae_pCO2=High pCO2      9564     9136     8637  28.77948   83.4968
+#                             N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2      500      323      348     1.842      5.38
+# Larvae_pCO2=Moderate pCO2 500      341      348     0.154      0.45
+# Larvae_pCO2=High pCO2     500      381      348     3.063      8.94
+# 
+#  Chisq= 9.8  on 2 degrees of freedom, p= 0.007 
 
 ```
 
@@ -594,9 +633,9 @@ library(survminer) # ggforect hazard ratio plot
 # Cox proportional hazards regression model
 Exp2_coxph_test          <- coxph(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, 
                                  data = binary_Exp2_larvaeMEANS)
-#                              coef exp(coef) se(coef)      z      p
-# Larvae_pCO2Moderate pCO2 0.075343  1.078254 0.001597  47.18 <2e-16
-# Larvae_pCO2High pCO2     0.252088  1.286709 0.001554 162.22 <2e-16
+#                             coef exp(coef) se(coef)     z       p
+# Larvae_pCO2Moderate pCO2 0.06796   1.07032  0.07765 0.875 0.38143
+# Larvae_pCO2High pCO2     0.23807   1.26880  0.07576 3.142 0.00168
 Exp2_hazardratio.coxph   <- ggforest(Exp2_coxph_test, data = binary_Exp2_larvaeMEANS)
 
 Exp2_coxph_test_table   <- coxph(Surv(Age, Count_dead) ~ Larvae_pCO2, 
@@ -648,6 +687,13 @@ dev.off()
 
 ### Experiment 4 F2s
 
+
+* **Note** our stocking density is in the hundreds of thousands, so if we consolidate down to a smaller number (i.e. 100) and round to the nearest whole number a we need to do (for 0 and 1 live and dead counts) then decimal places repesent many individuals. 
+
+  * Consider this justification for the chosen normalization number for starting density **the lowest survival > 0 should not represented by 1 individual, not rounded down to zero.
+  
+  * What do I mean by this? lets say after 14 days replicate A has the lowest survival >0 as 0.01%. The replicate started at  250,000 animals so 0.01% translates to 2,500 larvae remaining. If we normalize to too small of a starting value then we round down to 0 and the 2,500 actual larvae remaining are not acknowledged. *to address this* call the min() survival value for data >0. If >=0.01 normalize to 100, if >=0.001 normalize to 1000 and so on
+
 ```{r format F2 Experiment #4}
 # create new columns for live and dead based on the count and proportion (of alive) tobackcalculate dead - these are integers! 
 df_Exp4_rawvalues <- df_Exp4 %>% 
@@ -662,16 +708,18 @@ df_Exp4_rawvalues <- df_Exp4 %>%
                         Count_dead = case_when(proportion == 0 ~ 0,
                                                 proportion >0 ~ Count_total - Count_alive))
 
+# Determine how to normalize by assessing the min()  survival for data > 0
+min((df_Exp4_rawvalues %>%  filter(Percent_Survival_rel_stocking> 0))$Percent_Survival_rel_stocking) # 0.1
+# 0.01 means we should normalize to 100 individuals
 
 df_Exp4_norm_100 <- df_Exp4 %>% 
           dplyr::mutate(Count = 
                           as.numeric(gsub(",","",Count)),
-                        Count_norm_100 = round(proportion_rel_stocking*100)) %>% # remove the commas from these numbers- id as character if not removed!
-          dplyr::rename(Count_alive = Count_norm_100) %>% # rename to avoid confusion
-          dplyr::mutate(proportion = Percent_Survival/100,
+                        Count_alive = round(Percent_Survival_rel_stocking, digits = 0)) %>% # remove the commas from these numbers- id as character if not removed!
+          dplyr::mutate(proportion = Percent_Survival_rel_stocking/100,
                         Count_total = round(case_when(proportion == 0 ~ 0,
-                                                proportion >0 ~ 100)),# proportion is that of alive
-                           Count_dead = round(Count_total - Count_alive))
+                                                proportion >0 ~ 100), digits = 0),# proportion is that of alive
+                           Count_dead = round(Count_total - Count_alive, digits = 0))
 
 
 
@@ -846,8 +894,8 @@ dev.off()
 
 Exp4_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2, data = binary_Exp4_larvaeMEANS)
 #                             N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2      250      166      152     1.200      3.84
-# Larvae_pCO2=Moderate pCO2 336      190      204     0.899      3.84
+# Larvae_pCO2=Low pCO2      600      457      462    0.0541     0.196
+# Larvae_pCO2=Moderate pCO2 600      467      462    0.0541     0.196
 
 ```
 
@@ -1050,11 +1098,11 @@ dev.off()
 ```{r log-rank test survdiff  merge F1 & F2}
 
 F1_F2_logrank_test <- survdiff(formula = Surv(Age, Count_dead) ~ Larvae_pCO2+Generation, data = binary_Exp2_Exp4_MEANS)
-#                                               N Observed Expected (O-E)^2/E (O-E)^2/V
-# Larvae_pCO2=Low pCO2, Generation=1       952642   766697   623187     33048     57513
-# Larvae_pCO2=Low pCO2, Generation=2      1015383   931332  1046991     12777     29979
-# Larvae_pCO2=Moderate pCO2, Generation=1  941647   803030   615991     56792     98608
-# Larvae_pCO2=Moderate pCO2, Generation=2 2200474  2054068  2268959     20352     70256
+#                                           N Observed Expected (O-E)^2/E (O-E)^2/V
+# Larvae_pCO2=Low pCO2, Generation=1      500      323      269     10.95      20.2
+# Larvae_pCO2=Low pCO2, Generation=2      600      457      525      8.87      23.8
+# Larvae_pCO2=Moderate pCO2, Generation=1 500      341      269     19.42      35.7
+# Larvae_pCO2=Moderate pCO2, Generation=2 600      467      525      6.46      17.4
 
 ```
 
@@ -1195,7 +1243,7 @@ pdf(file="Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_
 Exp2_Exp4_coxme_test_tableMOD
 dev.off()
 
-pdf("Output/1_Survival_Growth/Experiment2_Experiment4_Low_v_Mod/Experiments2&4_HazardRatio_ModeratepCO2.pdf", width = 10, height = 3) # three figures
+pdf("Output/1_Survival_Growth/survival/embryo_to_metamorphosis/Experiment2_Experiment4_Low_v_Mod/Experiments2&4_HazardRatio_ModeratepCO2.pdf", width = 10, height = 3) # three figures
 print(Exp2_Exp4_hazardratio_plotMOD)
 dev.off()
 ```
@@ -1343,14 +1391,14 @@ Exp2Exp4_PrePost.master$Generation <- factor(Exp2Exp4_PrePost.master$Generation)
 TwoWay.Pre <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'pre'))
                   ))
-shapiro.test(resid(TwoWay.Pre)) # 0.2471 - pass
-leveneTest(TwoWay.Pre) # 0.5528 - pass
+shapiro.test(resid(TwoWay.Pre)) # 0.2078 - pass
+leveneTest(TwoWay.Pre) # 0.7496 - pass
 summary(TwoWay.Pre) # NO EFFECT
-#                        Df   Sum Sq  Mean Sq F value Pr(>F)
-# Larvae_pCO2             1 0.001225 0.001225   0.644  0.438
-# Generation              1 0.002470 0.002470   1.298  0.277
-# Larvae_pCO2:Generation  1 0.001441 0.001441   0.757  0.401
-# Residuals              12 0.022836 0.001903
+#                        Df  Sum Sq  Mean Sq F value Pr(>F)  
+# Larvae_pCO2             1 0.00250 0.002500   0.608 0.4506  
+# Generation              1 0.01667 0.016667   4.054 0.0671 .
+# Larvae_pCO2:Generation  1 0.00150 0.001500   0.365 0.5571  
+# Residuals              12 0.04933 0.004111 
 
 
 
@@ -1365,31 +1413,31 @@ summary(TwoWay.Pre) # NO EFFECT
 TwoWay.Post <- aov(lm(abs.delta.perc ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post'))
                   ))
-shapiro.test(resid(TwoWay.Post)) # 0.05633 - pass
-leveneTest(TwoWay.Post) # 0.2409 - pass
+shapiro.test(resid(TwoWay.Post)) # 0.5477 - pass
+leveneTest(TwoWay.Post) # 0.2027 - pass
 summary(TwoWay.Post)
 #                        Df   Sum Sq  Mean Sq F value  Pr(>F)   
-# Larvae_pCO2             1 0.009120 0.009120  13.583 0.00312 **
-# Generation              1 0.003840 0.003840   5.719 0.03405 * 
-# Larvae_pCO2:Generation  1 0.009300 0.009300  13.851 0.00292 **
-# Residuals              12 0.008058 0.000671 
-# * run non-parametric
+# Larvae_pCO2             1 0.012800 0.012800  10.296 0.00832 **
+# Generation              1 0.003762 0.003762   3.026 0.10979   
+# Larvae_pCO2:Generation  1 0.006636 0.006636   5.338 0.04127 * 
+# Residuals              11 0.013675 0.001243
+
 
 # tukey-Kramer
 TwoWay.Post.emmeans.pCO2         <- emmeans(TwoWay.Post, list(pairwise ~ Larvae_pCO2), adjust = "tukey")
 TwoWay.Post.emmeans.pCO2.letters <- multcomp::cld(object = TwoWay.Post.emmeans.pCO2$emmeans,
                                               Letters = letters)
- # Larvae_pCO2   emmean      SE df lower.CL upper.CL .group
- # Low pCO2      0.0519 0.00946 12   0.0313   0.0725  a    
- # Moderate pCO2 0.1121 0.00946 12   0.0915   0.1327   b  
+ # Larvae_pCO2   emmean     SE df lower.CL upper.CL .group
+ # Low pCO2      0.0588 0.0147 11   0.0263   0.0913  a    
+ # Moderate pCO2 0.1302 0.0129 11   0.1019   0.1586   b 
 TwoWay.Post.emmeans.pCO2.Gen         <- emmeans(TwoWay.Post, list(pairwise ~ Larvae_pCO2:Generation), adjust = "tukey")
 TwoWay.Post.emmeans.pCO2.Gen.letters <- multcomp::cld(object = TwoWay.Post.emmeans.pCO2.Gen$emmeans,
                                               Letters = letters)
  # Larvae_pCO2   Generation emmean     SE df lower.CL upper.CL .group
- # Low pCO2      2          0.0430 0.0150 12   0.0104   0.0756  a    
- # Low pCO2      1          0.0608 0.0116 12   0.0356   0.0860  a    
- # Moderate pCO2 1          0.0712 0.0116 12   0.0460   0.0964  a    
- # Moderate pCO2 2          0.1530 0.0150 12   0.1204   0.1856   b  
+ # Low pCO2      2          0.0500 0.0249 11 -0.00487    0.105  a    
+ # Low pCO2      1          0.0676 0.0158 11  0.03289    0.102  a    
+ # Moderate pCO2 1          0.0938 0.0158 11  0.05909    0.129  ab   
+ # Moderate pCO2 2          0.1667 0.0204 11  0.12186    0.211   b 
 
 
 
@@ -1399,14 +1447,11 @@ TwoWay.Post.emmeans.pCO2.Gen.letters <- multcomp::cld(object = TwoWay.Post.emmea
 TwoWay.Post_propsurv <- aov(lm(prop_survival ~ Larvae_pCO2 * Generation, 
                      data = (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post'))
                   ))
-shapiro.test(resid(TwoWay.Post_propsurv)) # 0.157 - pass
-leveneTest(TwoWay.Post_propsurv) # 0.05949 . - pass
+shapiro.test(resid(TwoWay.Post_propsurv)) # 0.138 - pass
+leveneTest(TwoWay.Post_propsurv) # 0.000192 ***  mo pass
 summary(TwoWay.Post_propsurv)
-#                        Df Sum Sq Mean Sq F value  Pr(>F)   
-# Larvae_pCO2             1 0.4595  0.4595  10.110 0.00793 **
-# Generation              1 0.0255  0.0255   0.561 0.46842   
-# Larvae_pCO2:Generation  1 0.0536  0.0536   1.180 0.29874   
-# Residuals              12 0.5454  0.0454 
+
+# run the non parametric
 
 
 
@@ -1422,26 +1467,26 @@ F1_PrePost <- (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post' & Gene
 F2_PrePost <- (Exp2Exp4_PrePost.master %>% dplyr::filter(type %in% 'post' & Generation == 2))
 
 # assumption tests
-(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[1] # 0.6588327 - low OA pass
-(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[2] # 0.06273204 - mod OA pass
-(F1_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 0.1082097 variance pass
+(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[1] # 0.8325317 - low OA pass
+(F1_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[2] # 0.04267901 - mod OA pass
+(F1_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 0.09366041 variance pass
 
 (F2_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[1] # 0.7955675 - low OA pass
 (F2_PrePost %>%  group_by(as.factor(Larvae_pCO2)) %>%  rstatix::shapiro_test(prop_survival))$p[2] # 0.8315045 - mod OA pass
-(F2_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 0.1364827 variance pass
+(F2_PrePost %>% rstatix::levene_test(prop_survival ~ as.factor(Larvae_pCO2)))$p[1] # 2.295776e-48 variance pass
 
 # all passed lets run t test now!
 F1_Ttestmod.eqvar   <- t.test(F1_PrePost$prop_survival ~ 
                                 (as.factor(F1_PrePost$Larvae_pCO2)), 
                                            alternative = "greater",
                                            var.equal = TRUE)
-# t = 2.8895, df = 8, p-value = 0.01011
+# t = 2.6148, df = 8, p-value = 0.01545
 
 F2_Ttestmod.eqvar   <- t.test(F2_PrePost$prop_survival ~ 
                                 (as.factor(F2_PrePost$Larvae_pCO2)), 
                                            alternative = "greater",
                                            var.equal = TRUE)
-# t = 1.8997, df = 4, p-value = 0.06514
+# t = 1.3416, df = 3, p-value = 0.1361
 
 
 ```

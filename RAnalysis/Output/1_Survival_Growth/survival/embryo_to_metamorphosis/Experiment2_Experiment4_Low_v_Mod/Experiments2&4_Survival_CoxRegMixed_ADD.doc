@@ -1,20 +1,20 @@
 Cox mixed-effects model fit by maximum likelihood
   Data: binary_Exp2_Exp4_all
-  events, n = 168055, 191196
-  Iterations= 9 38 
-                   NULL Integrated   Fitted
-Log-likelihood -1869472   -1868097 -1868079
+  events, n = 6094, 8600
+  Iterations= 14 57 
+                    NULL Integrated    Fitted
+Log-likelihood -47621.46  -47565.25 -47565.25
 
-                    Chisq   df p     AIC     BIC
-Integrated loglik 2750.81  3.0 0 2744.81 2714.71
- Penalized loglik 2786.18 12.2 0 2761.77 2639.33
+                   Chisq df p    AIC   BIC
+Integrated loglik 112.43  3 0 106.43 86.28
+ Penalized loglik 112.43  2 0 108.43 94.99
 
 Model:  Surv(Prop_time_metamophosis, Count_dead) ~ Generation + Larvae_pCO2 +      (1 | ID) 
 Fixed coefficients
-                                coef exp(coef)   se(coef)      z       p
-Generation2              -0.27355089 0.7606736 0.01160190 -23.58 0.0e+00
-Larvae_pCO2Moderate pCO2  0.04379186 1.0447649 0.01121469   3.90 9.4e-05
+                               coef exp(coef)   se(coef)      z     p
+Generation2              -0.2901649 0.7481402 0.02794283 -10.38 0.000
+Larvae_pCO2Moderate pCO2  0.0431128 1.0440557 0.02562762   1.68 0.093
 
 Random effects
  Group Variable  Std Dev      Variance    
- ID    Intercept 0.0198799844 0.0003952138
+ ID    Intercept 5.590794e-04 3.125698e-07
